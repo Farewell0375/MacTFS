@@ -1,0 +1,92 @@
+<idea-plugin>
+  <id>TFS</id>
+  <name>TFS</name>
+  <description>
+      <![CDATA[
+      Provides integration with Team Foundation Server (TFS).
+      <ul>
+      <li>Create and manage TFS workspaces</li>
+      <li>Checkout from TFS with Wizard</li>
+      <li>Download files from a TFS server from a new or existing workspace</li>
+      </ul>
+
+      To configure TFS integration, open <b>Settings | Version Control | TFS</b>.
+      ]]>
+  </description>
+  <category>VCS Integration</category>
+  <depends>com.intellij.modules.vcs</depends>
+
+  <vendor>JetBrains</vendor>
+
+  <resource-bundle>messages.TFSBundle</resource-bundle>
+
+  <extensionPoints>
+    <extensionPoint qualifiedName="TFS.checkinPolicy" interface="org.jetbrains.tfsIntegration.checkin.PolicyBase"/>
+  </extensionPoints>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <applicationService serviceImplementation="org.jetbrains.tfsIntegration.core.configuration.TFSConfigurationManager"/>
+    <applicationService serviceImplementation="org.jetbrains.tfsIntegration.core.TfsSdkManager"/>
+
+    <checkoutProvider implementation="org.jetbrains.tfsIntegration.core.TFSCheckoutProvider"/>
+    <search.projectOptionsTopHitProvider implementation="org.jetbrains.tfsIntegration.core.configuration.TFSOptionsTopHitProvider"/>
+    <vcs name="TFS" vcsClass="org.jetbrains.tfsIntegration.core.TFSVcs" displayName="TFS"/>
+    <vcsCheckinHandlerFactory implementation="org.jetbrains.tfsIntegration.core.TFSCheckinHandlerFactory"/>
+
+    <projectService serviceImplementation="org.jetbrains.tfsIntegration.core.TFSProjectConfiguration"/>
+  </extensions>
+
+  <actions>
+    <group id="TfsGlobalGroup" class="org.jetbrains.tfsIntegration.core.TFSGroup" popup="true">
+      <add-to-group group-id="VcsGroups" anchor="last"/>
+    </group>
+
+    <group id="TfsFilePopupGroup" popup="true" class="org.jetbrains.tfsIntegration.core.TFSGroup">
+      <add-to-group group-id="VcsGroup" anchor="last"/>
+    </group>
+
+    <group id="TfsGroup">
+      <separator/>
+      <reference ref="ChangesView.AddUnversioned"/>
+      <reference id="CheckinFiles"/>
+      <reference id="UpdateFiles"/>
+      <reference id="IntegrateFiles"/>
+      <reference id="CheckStatusForFiles"/>
+      <separator/>
+      <separator/>
+      <reference id="ChangesView.Revert"/>
+      <separator/>
+      <action id="Tfs.Checkout" class="org.jetbrains.tfsIntegration.actions.CheckoutAction"/>
+      <action id="Tfs.Branch" class="org.jetbrains.tfsIntegration.actions.BranchAction"/>
+      <action id="Tfs.MergeChanges" class="org.jetbrains.tfsIntegration.actions.MergeBranchAction"/>
+      <separator/>
+      <action id="Tfs.Label" class="org.jetbrains.tfsIntegration.actions.LabelAction"/>
+      <separator/>
+      <action id="Tfs.Lock" class="org.jetbrains.tfsIntegration.actions.LockAction"/>
+      <separator/>
+      <reference id="Compare.SameVersion"/>
+      <reference id="Compare.LastVersion"/>
+      <reference id="Compare.Selected"/>
+      <reference id="Vcs.ShowTabbedFileHistory"/>
+      <reference id="Vcs.ShowHistoryForBlock"/>
+      <reference id="Annotate"/>
+      <reference id="ChangesView.Browse"/>
+      <separator/>
+      <action id="Tfs.ItemInfo" class="org.jetbrains.tfsIntegration.actions.ItemInfoAction"/>
+      <add-to-group group-id="TfsGlobalGroup" anchor="last"/>
+      <add-to-group group-id="TfsFilePopupGroup" anchor="last"/>
+      <separator/>
+      <action id="TFS.ManageWorkspaces"
+              class="org.jetbrains.tfsIntegration.actions.TfsEditConfigurationAction"/>
+    </group>
+
+    <group id="TfsTreePopupMenu">
+    </group>
+
+    <action id="TFS.CreateVirtualFolder"
+            class="org.jetbrains.tfsIntegration.ui.servertree.CreateVirtualFolderAction" icon="AllIcons.Actions.NewFolder">
+      <add-to-group group-id="TfsTreePopupMenu" anchor="first"/>
+      </action>
+  </actions>
+
+</idea-plugin>

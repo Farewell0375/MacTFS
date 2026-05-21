@@ -1,0 +1,26 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'com.mydev'
+version = '0.1.0'
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation fileTree(dir: '../tfsIntegration/lib', include: '*.jar')
+}
+
+application {
+    mainClassName = 'com.mydev.mactfs.MacTfsCli'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
