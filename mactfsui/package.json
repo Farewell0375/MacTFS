@@ -1,0 +1,46 @@
+{
+  "name": "mactfsui",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "react-router build",
+    "dev": "react-router dev",
+    "electron": "electron electron/main.cjs",
+    "electron:dev": "concurrently -k \"pnpm dev\" \"wait-on http://localhost:5173 && NODE_ENV=development electron electron/main.cjs\"",
+    "start": "pnpm build && pnpm electron",
+    "typecheck": "react-router typegen && tsc",
+    "format": "prettier --write \"**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "@fontsource-variable/roboto-slab": "^5.2.8",
+    "@react-router/node": "7.13.1",
+    "@react-router/serve": "7.13.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "isbot": "^5.1.36",
+    "lucide-react": "^1.16.0",
+    "radix-ui": "^1.4.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router": "7.13.1",
+    "shadcn": "^4.8.0",
+    "tailwind-merge": "^3.6.0",
+    "tw-animate-css": "^1.4.0"
+  },
+  "devDependencies": {
+    "@react-router/dev": "7.13.1",
+    "@tailwindcss/vite": "^4.2.1",
+    "@types/node": "^22",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "concurrently": "^9.2.1",
+    "electron": "^42.2.0",
+    "prettier": "^3.8.1",
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-tsconfig-paths": "^5.1.4",
+    "wait-on": "^9.0.10"
+  }
+}

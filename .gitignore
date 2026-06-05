@@ -10,9 +10,21 @@ build/
 .idea/
 *.iml
 
+# Node / frontend
+node_modules/
+**/node_modules/
+
+# Environment
+.env
+.env.*
+*.local
+
 # Local runtime config
 .mactfs/
 *.log
+
+# Local TFS workspaces
+workspace/
 
 # macOS / temporary
 *.swp
