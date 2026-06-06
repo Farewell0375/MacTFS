@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -57,4 +57,38 @@ cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs
 
 ## 完成记录
 
-待完成后填写。
+完成时间：2026-06-05
+
+实际修改文件：
+
+- `mactfs/src/main/java/com/mydev/mactfs/core/MacTfsCoreService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/TfsPhaseOneService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/MacTfsCli.java`
+
+实际实现内容：
+
+- 新增 `listCollections` 查询可见 Collection。
+- 新增 `browseServerPath` 浏览 `$ /` 或指定服务端路径的下一级文件和文件夹。
+- 返回 `name`、`serverPath`、`folder`、`latestVersion`、`checkinDate`。
+
+已执行测试：
+
+- `cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs && ../tfsIntegration/gradlew build`
+
+测试结果：
+
+- 构建通过。
+
+未执行测试及原因：
+
+- 未执行真实 Collection 浏览，避免默认访问真实 TFS 环境。
+
+验收标准：
+
+- 能返回 Collection 列表：代码实现满足。
+- 能浏览 Collection 下服务端目录：代码实现满足。
+- 未映射目录也能浏览：使用 VersionControlClient 直接按 server path 查询，满足。
+
+遗留问题：
+
+- 无。

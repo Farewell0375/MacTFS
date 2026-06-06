@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -59,4 +59,38 @@ cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs
 
 ## 完成记录
 
-待完成后填写。
+完成时间：2026-06-05
+
+实际修改文件：
+
+- `mactfs/src/main/java/com/mydev/mactfs/core/MacTfsCoreService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/TfsPhaseOneService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/MacTfsCli.java`
+
+实际实现内容：
+
+- 新增 `checkin`，按传入 server paths 过滤同一 Workspace 的 pending changes。
+- comment 为空时核心层直接返回失败。
+- 成功时返回 changeset 编号和提交变更数量。
+
+已执行测试：
+
+- `cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs && ../tfsIntegration/gradlew build`
+
+测试结果：
+
+- 构建通过。
+
+未执行测试及原因：
+
+- 未执行真实 checkin，避免默认提交真实 TFS 变更。
+
+验收标准：
+
+- comment 为空时核心层拒绝签入：满足。
+- 只提交传入的 pending changes：满足。
+- 成功返回 changeset：代码实现满足。
+
+遗留问题：
+
+- 无。

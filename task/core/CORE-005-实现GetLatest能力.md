@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -57,4 +57,38 @@ cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs
 
 ## 完成记录
 
-待完成后填写。
+完成时间：2026-06-05
+
+实际修改文件：
+
+- `mactfs/src/main/java/com/mydev/mactfs/core/MacTfsCoreService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/TfsPhaseOneService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/MacTfsCli.java`
+
+实际实现内容：
+
+- 新增 `getLatest`，支持 Workspace 整体、服务端目录递归和单文件粒度。
+- 返回 `updated`、`operations`、`conflicts`、`failures`。
+- `sync` 继续执行 Mapping 保存后 Get Latest 的旧流程。
+
+已执行测试：
+
+- `cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs && ../tfsIntegration/gradlew build`
+
+测试结果：
+
+- 构建通过。
+
+未执行测试及原因：
+
+- 未执行真实下载，避免默认写入本地工作区文件。
+
+验收标准：
+
+- Mapping 建立后可选择不立即下载：`addMapping` 与 `getLatest` 已拆分。
+- 可对子目录或文件单独下载：代码实现满足。
+- 下载结果可展示：返回结构化结果。
+
+遗留问题：
+
+- 无。

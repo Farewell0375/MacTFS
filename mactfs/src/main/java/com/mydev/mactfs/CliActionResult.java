@@ -35,6 +35,13 @@ public class CliActionResult {
     }
 
     /**
+     * 构造带结构化数据的失败结果，保留 core 层耗时和操作摘要。
+     */
+    public static CliActionResult failure(String message, String logs, Map<String, Object> data) {
+        return new CliActionResult(false, message, logs, data);
+    }
+
+    /**
      * 将结果转换为 JSON 模式需要的 Map 结构。
      */
     public Map<String, Object> toMap() {

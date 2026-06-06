@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -61,4 +61,39 @@ cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs
 
 ## 完成记录
 
-待完成后填写。
+完成时间：2026-06-05
+
+实际修改文件：
+
+- `mactfs/src/main/java/com/mydev/mactfs/core/MacTfsCoreService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/TfsPhaseOneService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/MacTfsCli.java`
+
+实际实现内容：
+
+- 新增 `compareFolder`，根据 Mapping 解析 localPath 与 serverPath。
+- 使用 ExtendedItem 与 PendingChange 元数据合并目录状态。
+- 扫描本地目录并默认隐藏 `upToDate`。
+- 输出 `localModified`、`remoteChanged`、`bothChanged`、`localOnly`、`notDownloaded`、`localDeleted`、pending 状态。
+
+已执行测试：
+
+- `cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs && ../tfsIntegration/gradlew build`
+
+测试结果：
+
+- 构建通过。
+
+未执行测试及原因：
+
+- 未执行真实大目录对比，避免依赖本机真实 TFS 工作区。
+
+验收标准：
+
+- 差异状态识别：代码实现满足。
+- 不逐文件下载服务端内容：满足。
+- 结果可供 UI 勾选处理：返回结构化 diff items。
+
+遗留问题：
+
+- 无。

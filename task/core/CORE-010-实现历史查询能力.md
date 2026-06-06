@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -60,4 +60,38 @@ cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs
 
 ## 完成记录
 
-待完成后填写。
+完成时间：2026-06-05
+
+实际修改文件：
+
+- `mactfs/src/main/java/com/mydev/mactfs/core/MacTfsCoreService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/TfsPhaseOneService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/MacTfsCli.java`
+
+实际实现内容：
+
+- 新增 `queryHistory`，支持文件和目录最近 100 条历史。
+- 新增 `queryChangesetFiles`，返回 changeset 内影响文件列表。
+- 返回 changeset、作者、时间、comment、changeType、itemType。
+
+已执行测试：
+
+- `cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs && ../tfsIntegration/gradlew build`
+
+测试结果：
+
+- 构建通过。
+
+未执行测试及原因：
+
+- 未执行真实历史查询，避免默认访问真实 TFS 环境。
+
+验收标准：
+
+- 文件最近 100 条历史：代码实现满足。
+- 目录最近 100 条历史：代码实现满足。
+- changeset 文件列表数据：代码实现满足。
+
+遗留问题：
+
+- 无。

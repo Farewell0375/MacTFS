@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -64,4 +64,41 @@ cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs
 
 ## 完成记录
 
-待完成后填写。
+完成时间：2026-06-05
+
+实际修改文件：
+
+- `mactfs/src/main/java/com/mydev/mactfs/core/MacTfsCoreService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/TfsPhaseOneService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/MacTfsCli.java`
+
+实际实现内容：
+
+- 新增 `checkout`，支持单文件和目录递归 pend edit。
+- 新增 `add`，支持本地文件 pend add。
+- 新增 `delete`，支持文件和目录 pending delete。
+- 新增 `undo`，支持撤销传入路径 pending changes。
+
+已执行测试：
+
+- `cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs && ../tfsIntegration/gradlew build`
+
+测试结果：
+
+- 构建通过。
+
+未执行测试及原因：
+
+- 未执行真实 checkout/add/delete/undo，避免默认修改真实 TFS 服务端 pending 状态。
+
+验收标准：
+
+- 已下载文件可 checkout：代码实现满足。
+- 目录 checkout 可递归执行：代码实现满足。
+- localOnly 可 add：代码实现满足。
+- 已版本控制文件可 pending delete：代码实现满足。
+- pending changes 可 undo：代码实现满足。
+
+遗留问题：
+
+- 无。

@@ -21,6 +21,10 @@ application {
     mainClassName = 'com.mydev.mactfs.MacTfsCli'
 }
 
+applicationDistribution.from('../tfsIntegration/lib/native') {
+    into 'lib/native'
+}
+
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }

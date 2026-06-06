@@ -22,38 +22,38 @@ blocked
 
 | 模块 | done | total | progress |
 |---|---:|---:|---:|
-| Core | 0 | 12 | 0% |
+| Core | 12 | 12 | 100% |
 | Server API | 0 | 10 | 0% |
 | CLI | 0 | 2 | 0% |
 | Frontend | 0 | 13 | 0% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 0 | 46 | 0% |
+| Overall | 12 | 46 | 26% |
 
 ## 当前阶段
 
-Core
+Server API
 
 ## 下一步任务
 
-- [CORE-001-抽离核心服务层.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-001-抽离核心服务层.md)
+- [SERVER-001-创建本地API服务.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-001-创建本地API服务.md)
 
 ## Core
 
 | 任务 | 状态 | 优先级 |
 |---|---|---|
-| [CORE-001-抽离核心服务层.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-001-抽离核心服务层.md) | todo | P0 |
-| [CORE-002-实现连接认证与配置模型.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-002-实现连接认证与配置模型.md) | todo | P0 |
-| [CORE-003-实现Collection与目录浏览.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-003-实现Collection与目录浏览.md) | todo | P0 |
-| [CORE-004-实现Workspace与Mapping管理.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-004-实现Workspace与Mapping管理.md) | todo | P0 |
-| [CORE-005-实现GetLatest能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-005-实现GetLatest能力.md) | todo | P0 |
-| [CORE-006-实现PendingChanges查询与状态模型.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-006-实现PendingChanges查询与状态模型.md) | todo | P0 |
-| [CORE-007-实现签出新增删除撤销.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-007-实现签出新增删除撤销.md) | todo | P0 |
-| [CORE-008-实现签入能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-008-实现签入能力.md) | todo | P0 |
-| [CORE-009-实现目录对比能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-009-实现目录对比能力.md) | todo | P0 |
-| [CORE-010-实现历史查询能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-010-实现历史查询能力.md) | todo | P0 |
-| [CORE-011-实现文件内容与Diff能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-011-实现文件内容与Diff能力.md) | todo | P0 |
-| [CORE-012-实现异常超时与日志模型.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-012-实现异常超时与日志模型.md) | todo | P1 |
+| [CORE-001-抽离核心服务层.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-001-抽离核心服务层.md) | done | P0 |
+| [CORE-002-实现连接认证与配置模型.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-002-实现连接认证与配置模型.md) | done | P0 |
+| [CORE-003-实现Collection与目录浏览.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-003-实现Collection与目录浏览.md) | done | P0 |
+| [CORE-004-实现Workspace与Mapping管理.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-004-实现Workspace与Mapping管理.md) | done | P0 |
+| [CORE-005-实现GetLatest能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-005-实现GetLatest能力.md) | done | P0 |
+| [CORE-006-实现PendingChanges查询与状态模型.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-006-实现PendingChanges查询与状态模型.md) | done | P0 |
+| [CORE-007-实现签出新增删除撤销.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-007-实现签出新增删除撤销.md) | done | P0 |
+| [CORE-008-实现签入能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-008-实现签入能力.md) | done | P0 |
+| [CORE-009-实现目录对比能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-009-实现目录对比能力.md) | done | P0 |
+| [CORE-010-实现历史查询能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-010-实现历史查询能力.md) | done | P0 |
+| [CORE-011-实现文件内容与Diff能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-011-实现文件内容与Diff能力.md) | done | P0 |
+| [CORE-012-实现异常超时与日志模型.md](/Users/fenghp/Desktop/DEV/project/mydev/task/core/CORE-012-实现异常超时与日志模型.md) | done | P1 |
 
 ## Server API
 

@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -58,4 +58,38 @@ cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs
 
 ## 完成记录
 
-待完成后填写。
+完成时间：2026-06-05
+
+实际修改文件：
+
+- `mactfs/src/main/java/com/mydev/mactfs/core/MacTfsCoreService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/TfsPhaseOneService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/MacTfsCli.java`
+
+实际实现内容：
+
+- 新增 `listPendingChanges` 查询 Workspace pending changes。
+- 定义稳定状态：`pendingEdit`、`pendingAdd`、`pendingDelete`、`pendingRename`、`pending`。
+- 返回 serverPath、localPath、name、folder、status、changeType、version。
+
+已执行测试：
+
+- `cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs && ../tfsIntegration/gradlew build`
+
+测试结果：
+
+- 构建通过。
+
+未执行测试及原因：
+
+- 未执行真实 pending changes 查询，避免依赖本机真实 TFS 工作区。
+
+验收标准：
+
+- 可查询当前 Workspace pending changes：代码实现满足。
+- 状态字段稳定可序列化：满足。
+- 可区分 edit/add/delete：满足。
+
+遗留问题：
+
+- 无。

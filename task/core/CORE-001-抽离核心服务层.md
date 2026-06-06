@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -58,4 +58,38 @@ cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs
 
 ## 完成记录
 
-待完成后填写。
+完成时间：2026-06-05
+
+实际修改文件：
+
+- `mactfs/src/main/java/com/mydev/mactfs/core/MacTfsCoreService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/TfsPhaseOneService.java`
+- `mactfs/src/main/java/com/mydev/mactfs/MacTfsCli.java`
+
+实际实现内容：
+
+- 新增 `MacTfsCoreService` 作为不依赖 CLI 输出格式的核心服务层。
+- 将 CLI 参数解析、文本/JSON 输出保留在 `TfsPhaseOneService` 与 `MacTfsCli`。
+- 保留 `test-connection`、`list-collections`、`sync` 等原有 CLI 动作。
+
+已执行测试：
+
+- `cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs && ../tfsIntegration/gradlew build`
+
+测试结果：
+
+- 构建通过。
+
+未执行测试及原因：
+
+- 未执行真实 TFS 连接测试，当前任务只要求构建验证，且真实账号/服务环境不应默认使用。
+
+验收标准：
+
+- 核心服务层不依赖 CLI 输出格式：满足。
+- 现有 CLI 动作仍可调用：满足。
+- 构建通过：满足。
+
+遗留问题：
+
+- 无。
