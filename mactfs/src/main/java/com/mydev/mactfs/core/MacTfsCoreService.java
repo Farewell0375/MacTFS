@@ -957,6 +957,9 @@ public class MacTfsCoreService {
     }
 
     private void collectLocalFiles(File root, File current, boolean recursive, Set<String> result) throws IOException {
+        if (!root.equals(current) && isTfsTemporaryFile(current)) {
+            return;
+        }
         result.add(relativeLocalPath(root.getAbsolutePath(), current.getAbsolutePath()));
         if (!current.isDirectory() || (!recursive && !root.equals(current))) {
             return;
@@ -968,6 +971,14 @@ public class MacTfsCoreService {
         for (File child : children) {
             collectLocalFiles(root, child, recursive, result);
         }
+    }
+
+    /**
+     * 忽略 TFS SDK 同步期间产生的临时文件，避免并发目录对比误报本地独有差异。
+     */
+    private boolean isTfsTemporaryFile(File file) {
+        String name = file.getName().toLowerCase();
+        return name.startsWith("teamexplorer") && name.endsWith(".tmp");
     }
 
     private String localPathOf(Workspace workspace, ExtendedItem item, String rootServerPath, String rootLocalPath) {

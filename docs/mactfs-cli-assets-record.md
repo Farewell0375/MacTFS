@@ -41,6 +41,11 @@ CLI 主入口：
 核心服务：
 
 - `/Users/fenghp/Desktop/DEV/project/mydev/mactfs/src/main/java/com/mydev/mactfs/TfsPhaseOneService.java`
+- `/Users/fenghp/Desktop/DEV/project/mydev/mactfs/src/main/java/com/mydev/mactfs/core/MacTfsCoreService.java`
+
+本地 API 服务：
+
+- `/Users/fenghp/Desktop/DEV/project/mydev/mactfs/src/main/java/com/mydev/mactfs/server/MacTfsServer.java`
 
 参数解析：
 
@@ -156,6 +161,10 @@ TFS native 目录：
 
 当前 `MacTfsCli` 支持：
 
+- `token --show`
+- `health`
+- `api`
+- `curl health`
 - `test-connection`
 - `list-collections`
 - `list-workspaces`
@@ -167,6 +176,8 @@ TFS native 目录：
 
 - `--output text`
 - `--output json`
+
+阶段三之后，CLI 保留旧 `--action ...` 入口，同时新增本地 API 调试入口。新增入口默认读取 `~/.mactfs/server-token`，调用 `http://127.0.0.1:38765`。
 
 ## 十、如何运行 CLI
 
@@ -291,6 +302,32 @@ com.mydev.mactfs.MacTfsCli \
 --local-path '/Users/fenghp/Desktop/个人/test'
 ```
 
+### 8. 阶段三本地 API 调试命令
+
+查看本地 API token：
+
+```bash
+/Users/fenghp/Desktop/DEV/project/mydev/mactfs/build/install/mactfs/bin/mactfs token --show
+```
+
+检查本地 API 服务：
+
+```bash
+/Users/fenghp/Desktop/DEV/project/mydev/mactfs/build/install/mactfs/bin/mactfs health --output json
+```
+
+通用 API 调试：
+
+```bash
+/Users/fenghp/Desktop/DEV/project/mydev/mactfs/build/install/mactfs/bin/mactfs api --method GET --path /api/health --output json
+```
+
+生成可复用的 curl health 示例：
+
+```bash
+/Users/fenghp/Desktop/DEV/project/mydev/mactfs/build/install/mactfs/bin/mactfs curl health
+```
+
 ## 十一、如何使用 CLI
 
 推荐顺序：
@@ -320,6 +357,8 @@ com.mydev.mactfs.MacTfsCli \
 - 能浏览服务端目录
 - 能保存映射
 - 能执行真实 `Get Latest`
+- CLI 可通过 `token`、`health`、`api`、`curl health` 调试本地 API
+- 目录对比会忽略 TFS SDK 同步期间产生的 `teamexplorer*.tmp` 临时文件，避免误报 `localOnly`
 
 ### 2. 2026-05-21 再次验证结果
 

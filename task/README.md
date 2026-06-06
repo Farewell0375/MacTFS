@@ -24,19 +24,19 @@ blocked
 |---|---:|---:|---:|
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
-| CLI | 0 | 2 | 0% |
+| CLI | 2 | 2 | 100% |
 | Frontend | 0 | 13 | 0% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 22 | 46 | 48% |
+| Overall | 24 | 46 | 52% |
 
 ## 当前阶段
 
-CLI
+Frontend
 
 ## 下一步任务
 
-- [CLI-001-改造CLI调用本地API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/cli/CLI-001-改造CLI调用本地API.md)
+- [FE-001-实现Electron启动服务与API客户端.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-001-实现Electron启动服务与API客户端.md)
 
 ## Core
 
@@ -74,8 +74,8 @@ CLI
 
 | 任务 | 状态 | 优先级 |
 |---|---|---|
-| [CLI-001-改造CLI调用本地API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/cli/CLI-001-改造CLI调用本地API.md) | todo | P1 |
-| [CLI-002-实现Token与调试命令.md](/Users/fenghp/Desktop/DEV/project/mydev/task/cli/CLI-002-实现Token与调试命令.md) | todo | P1 |
+| [CLI-001-改造CLI调用本地API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/cli/CLI-001-改造CLI调用本地API.md) | done | P1 |
+| [CLI-002-实现Token与调试命令.md](/Users/fenghp/Desktop/DEV/project/mydev/task/cli/CLI-002-实现Token与调试命令.md) | done | P1 |
 
 ## Frontend
 
