@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -57,4 +57,22 @@ curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/js
 
 ## 完成记录
 
-待完成后填写。
+- 实际修改文件：
+  - `mactfs/src/main/java/com/mydev/mactfs/server/MacTfsServer.java`
+- 实际实现内容：
+  - 新增 `POST /api/compare/folder`。
+  - 接收 serverPath、localPath、recursive。
+  - 调用 core `compareFolder`。
+  - core 已默认过滤 `upToDate`，只返回差异项。
+- 已执行测试：
+  - 执行 `../tfsIntegration/gradlew build`。
+- 测试结果：
+  - build 成功。
+- 未执行测试及原因：
+  - 未执行真实目录对比，当前未提供可用 TFS mapping 和本地目录。
+- 是否满足验收标准：
+  - 已映射目录可对比：代码已调用 core。
+  - 未映射目录返回明确错误：core 会返回 `Server path is not mapped`。
+  - 返回状态可供 UI 操作映射：core 返回 PRD 约定状态字段。
+- 遗留问题：
+  - 需要真实映射目录后补充对比结果验收。

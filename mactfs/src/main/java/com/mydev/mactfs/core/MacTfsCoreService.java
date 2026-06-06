@@ -760,13 +760,17 @@ public class MacTfsCoreService {
         return result;
     }
 
+    /**
+     * 根据 pending change、工作区本地版本和服务端最新版本计算目录对比状态。
+     */
     private String resolveDiffStatus(ExtendedItem item, PendingChange pendingChange, File localFile) {
         if (pendingChange != null) {
             return toPendingStatus(pendingChange);
         }
         boolean exists = localFile != null && localFile.exists();
         boolean remoteChanged = item.getLocalVersion() > 0 && item.getLatestVersion() > item.getLocalVersion();
-        boolean localModified = exists && item.getCheckinDate() != null && localFile.lastModified() > item.getCheckinDate().getTimeInMillis();
+        // mtime 只能作为远端版本变化时的辅助信号，避免 Get Latest 后因本地时间晚于签入时间误报本地修改。
+        boolean localModified = remoteChanged && exists && item.getCheckinDate() != null && localFile.lastModified() > item.getCheckinDate().getTimeInMillis();
         if (!exists && item.getLocalVersion() > 0) {
             return "localDeleted";
         }

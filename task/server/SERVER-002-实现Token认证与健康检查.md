@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -57,4 +57,26 @@ curl -H "Authorization: Bearer <token>" http://127.0.0.1:38765/api/health
 
 ## 完成记录
 
-待完成后填写。
+- 实际修改文件：
+  - `mactfs/src/main/java/com/mydev/mactfs/server/MacTfsServer.java`
+- 实际实现内容：
+  - 启动时读取或生成 `~/.mactfs/server-token`。
+  - token 文件权限设置为 `600`。
+  - 所有 `/api/*` 请求校验 `Authorization: Bearer <token>`。
+  - 新增 `GET /api/health`，返回 host、port、tokenFile、configFile、connected 和 durationMs。
+- 已执行测试：
+  - 无 token 调用 `GET /api/health`。
+  - 带正确 Bearer token 调用 `GET /api/health`。
+  - 检查 `~/.mactfs/server-token` 文件权限。
+- 测试结果：
+  - 无 token 返回 HTTP 401。
+  - 正确 token 返回 `success=true`、`host=127.0.0.1`、`port=38765`。
+  - token 文件权限为 `600`。
+- 未执行测试及原因：
+  - 未打印 token 明文，符合默认日志不暴露 token 的要求。
+- 是否满足验收标准：
+  - 无 token 请求被拒绝：满足。
+  - 正确 token 请求通过：满足。
+  - 可通过 health 检查服务状态：满足。
+- 遗留问题：
+  - 无。

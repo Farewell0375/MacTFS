@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -60,4 +60,24 @@ curl -H "Authorization: Bearer <token>" "http://127.0.0.1:38765/api/history?path
 
 ## 完成记录
 
-待完成后填写。
+- 实际修改文件：
+  - `mactfs/src/main/java/com/mydev/mactfs/server/MacTfsServer.java`
+- 实际实现内容：
+  - 新增 `GET /api/history`。
+  - 新增 `GET /api/history/changeset`。
+  - 新增 `POST /api/diff/local-latest`。
+  - 新增 `POST /api/diff/revisions`。
+  - 历史查询复用 core 默认最近 100 条逻辑。
+- 已执行测试：
+  - 执行 `../tfsIntegration/gradlew build`。
+- 测试结果：
+  - build 成功。
+- 未执行测试及原因：
+  - 未执行真实历史和 diff 查询，当前未提供可用 TFS 路径和 changeset。
+- 是否满足验收标准：
+  - 文件历史可查询：代码已调用 core `queryHistory`。
+  - 目录历史可查询：请求 `folder=true` 时调用递归历史查询。
+  - changeset 文件列表可查询：代码已调用 core `queryChangesetFiles`。
+  - 两个历史版本可对比：代码已调用 core `diffRevisions`。
+- 遗留问题：
+  - 需要真实 TFS 路径和 changeset 后补充实测。

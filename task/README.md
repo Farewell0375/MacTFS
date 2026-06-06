@@ -23,20 +23,20 @@ blocked
 | 模块 | done | total | progress |
 |---|---:|---:|---:|
 | Core | 12 | 12 | 100% |
-| Server API | 0 | 10 | 0% |
+| Server API | 10 | 10 | 100% |
 | CLI | 0 | 2 | 0% |
 | Frontend | 0 | 13 | 0% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 12 | 46 | 26% |
+| Overall | 22 | 46 | 48% |
 
 ## 当前阶段
 
-Server API
+CLI
 
 ## 下一步任务
 
-- [SERVER-001-创建本地API服务.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-001-创建本地API服务.md)
+- [CLI-001-改造CLI调用本地API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/cli/CLI-001-改造CLI调用本地API.md)
 
 ## Core
 
@@ -59,16 +59,16 @@ Server API
 
 | 任务 | 状态 | 优先级 |
 |---|---|---|
-| [SERVER-001-创建本地API服务.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-001-创建本地API服务.md) | todo | P0 |
-| [SERVER-002-实现Token认证与健康检查.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-002-实现Token认证与健康检查.md) | todo | P0 |
-| [SERVER-003-实现配置读写API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-003-实现配置读写API.md) | todo | P0 |
-| [SERVER-004-实现连接会话API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-004-实现连接会话API.md) | todo | P0 |
-| [SERVER-005-实现Collection与目录API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-005-实现Collection与目录API.md) | todo | P0 |
-| [SERVER-006-实现Workspace与MappingAPI.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-006-实现Workspace与MappingAPI.md) | todo | P0 |
-| [SERVER-007-实现文件操作API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-007-实现文件操作API.md) | todo | P0 |
-| [SERVER-008-实现目录对比API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-008-实现目录对比API.md) | todo | P0 |
-| [SERVER-009-实现历史与DiffAPI.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-009-实现历史与DiffAPI.md) | todo | P0 |
-| [SERVER-010-实现操作日志与超时.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-010-实现操作日志与超时.md) | todo | P1 |
+| [SERVER-001-创建本地API服务.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-001-创建本地API服务.md) | done | P0 |
+| [SERVER-002-实现Token认证与健康检查.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-002-实现Token认证与健康检查.md) | done | P0 |
+| [SERVER-003-实现配置读写API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-003-实现配置读写API.md) | done | P0 |
+| [SERVER-004-实现连接会话API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-004-实现连接会话API.md) | done | P0 |
+| [SERVER-005-实现Collection与目录API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-005-实现Collection与目录API.md) | done | P0 |
+| [SERVER-006-实现Workspace与MappingAPI.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-006-实现Workspace与MappingAPI.md) | done | P0 |
+| [SERVER-007-实现文件操作API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-007-实现文件操作API.md) | done | P0 |
+| [SERVER-008-实现目录对比API.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-008-实现目录对比API.md) | done | P0 |
+| [SERVER-009-实现历史与DiffAPI.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-009-实现历史与DiffAPI.md) | done | P0 |
+| [SERVER-010-实现操作日志与超时.md](/Users/fenghp/Desktop/DEV/project/mydev/task/server/SERVER-010-实现操作日志与超时.md) | done | P1 |
 
 ## CLI
 
