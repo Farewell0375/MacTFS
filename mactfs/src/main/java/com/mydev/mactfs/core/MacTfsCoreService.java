@@ -18,6 +18,8 @@ import com.microsoft.tfs.core.clients.versioncontrol.exceptions.WorkspaceNotFoun
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.Change;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.ChangeType;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.Changeset;
+import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.Conflict;
+import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.ConflictType;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.DeletedState;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.ExtendedItem;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.GetRequest;
@@ -28,6 +30,7 @@ import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.LockLevel;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.PendingChange;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.PendingSet;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.RecursionType;
+import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.Resolution;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.WorkingFolder;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.Workspace;
 import com.microsoft.tfs.core.clients.versioncontrol.specs.ItemSpec;
@@ -61,6 +64,8 @@ public class MacTfsCoreService {
 
     private static final int HISTORY_LIMIT = 100;
     private static final Charset TEXT_CHARSET = Charset.forName("UTF-8");
+    private static final long MAX_TEXT_CONTENT_BYTES = 2L * 1024 * 1024;
+    private static final int BINARY_SNIFF_BYTES = 8000;
 
     /**
      * 验证 TFS 地址和账号可用性，并返回当前账号可见 Collection 数量。
@@ -513,9 +518,27 @@ public class MacTfsCoreService {
                     GetItemsOptions.DOWNLOAD
                 );
                 File tempFile = item.downloadFileToTempLocation(connection.versionControlClient, "mactfs");
-                String content = new String(Files.readAllBytes(tempFile.toPath()), TEXT_CHARSET);
+                TfsFileContent content = buildFileContent(item.getServerItem(), item.getChangeSetID(), tempFile, logs);
                 logs.add("File content loaded: " + item.getServerItem());
-                return new TfsFileContent(item.getServerItem(), item.getChangeSetID(), content, false);
+                return content;
+            }
+        });
+    }
+
+    /**
+     * 读取本地已映射文件的文本内容，套用与服务器内容一致的二进制和大文件约束。
+     */
+    public CoreOperationResult<TfsFileContent> getLocalFileContent(final String localPath) {
+        return execute("getLocalFileContent", new CoreCallable<TfsFileContent>() {
+            @Override
+            public TfsFileContent call(List<String> logs) throws Exception {
+                File file = new File(require(localPath, "localPath"));
+                if (!file.exists() || file.isDirectory()) {
+                    throw new IllegalArgumentException("Local file not found: " + localPath);
+                }
+                TfsFileContent content = buildFileContent(file.getAbsolutePath(), 0, file, logs);
+                logs.add("Local file content loaded: " + file.getAbsolutePath());
+                return content;
             }
         });
     }
@@ -571,6 +594,193 @@ public class MacTfsCoreService {
                 return diff;
             }
         });
+    }
+
+    /**
+     * 查询当前 Workspace 在指定范围内的冲突明细，供 Get Latest / Checkout 冲突弹窗展示。
+     */
+    public CoreOperationResult<List<TfsConflictInfo>> listConflicts(final TfsConnectionConfig config,
+                                                                   final String collectionName,
+                                                                   final String workspaceName,
+                                                                   final List<String> serverPaths,
+                                                                   final boolean recursive) {
+        return execute("listConflicts", new CoreCallable<List<TfsConflictInfo>>() {
+            @Override
+            public List<TfsConflictInfo> call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                Conflict[] conflicts = workspace.queryConflicts(conflictScope(workspace, serverPaths), recursive);
+                List<TfsConflictInfo> result = new ArrayList<TfsConflictInfo>();
+                if (conflicts != null) {
+                    for (Conflict conflict : conflicts) {
+                        result.add(toConflictInfo(conflict));
+                    }
+                }
+                logs.add("Conflicts loaded: " + result.size());
+                return result;
+            }
+        });
+    }
+
+    /**
+     * 对单个冲突应用解决方式（采用服务器版本或保留本地版本），并返回剩余冲突数量。
+     */
+    public CoreOperationResult<TfsConflictResolution> applyConflict(final TfsConnectionConfig config,
+                                                                   final String collectionName,
+                                                                   final String workspaceName,
+                                                                   final int conflictId,
+                                                                   final String resolution) {
+        return execute("applyConflict", new CoreCallable<TfsConflictResolution>() {
+            @Override
+            public TfsConflictResolution call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                Resolution target = toResolution(resolution);
+                String[] scope = conflictScope(workspace, null);
+                Conflict matched = null;
+                Conflict[] conflicts = workspace.queryConflicts(scope, true);
+                if (conflicts != null) {
+                    for (Conflict conflict : conflicts) {
+                        if (conflict.getConflictID() == conflictId) {
+                            matched = conflict;
+                            break;
+                        }
+                    }
+                }
+                if (matched == null) {
+                    throw new IllegalArgumentException("Conflict not found: " + conflictId);
+                }
+                matched.setResolution(target);
+                workspace.resolveConflict(matched);
+                Conflict[] remaining = workspace.queryConflicts(scope, true);
+                int remainingCount = remaining == null ? 0 : remaining.length;
+                logs.add("Conflict resolved: " + conflictId + " -> " + resolution + ", remaining=" + remainingCount);
+                return new TfsConflictResolution(conflictId, resolution, matched.isResolved(), remainingCount);
+            }
+        });
+    }
+
+    /**
+     * 计算冲突查询范围：优先使用调用方传入的路径，否则回退到 Workspace 全部映射根。
+     */
+    private String[] conflictScope(Workspace workspace, List<String> serverPaths) {
+        List<String> scope = new ArrayList<String>();
+        if (serverPaths != null) {
+            for (String path : serverPaths) {
+                if (path != null && path.trim().length() > 0) {
+                    scope.add(path.trim());
+                }
+            }
+        }
+        if (scope.isEmpty()) {
+            WorkingFolder[] folders = workspace.getFolders();
+            if (folders != null) {
+                for (WorkingFolder folder : folders) {
+                    if (folder.getServerItem() != null && folder.getServerItem().trim().length() > 0) {
+                        scope.add(folder.getServerItem());
+                    }
+                }
+            }
+        }
+        if (scope.isEmpty()) {
+            scope.add("$/");
+        }
+        return scope.toArray(new String[scope.size()]);
+    }
+
+    /**
+     * 把 UI 传入的解决方式标识映射为 TFS Resolution，仅支持第一版约定的两种取舍。
+     */
+    private Resolution toResolution(String resolution) {
+        String value = resolution == null ? "" : resolution.trim().toLowerCase();
+        if ("takeserver".equals(value) || "server".equals(value) || "theirs".equals(value) || "accept_theirs".equals(value)) {
+            return Resolution.ACCEPT_THEIRS;
+        }
+        if ("keeplocal".equals(value) || "local".equals(value) || "yours".equals(value) || "accept_yours".equals(value)) {
+            return Resolution.ACCEPT_YOURS;
+        }
+        throw new IllegalArgumentException("Unsupported conflict resolution: " + resolution);
+    }
+
+    /**
+     * 把 TFS 冲突对象转换为稳定可序列化的冲突明细。
+     */
+    private TfsConflictInfo toConflictInfo(Conflict conflict) {
+        String serverPath = firstNonBlank(conflict.getYourServerItem(), conflict.getTheirServerItem(), conflict.getBaseServerItem());
+        String localPath = firstNonBlank(conflict.getSourceLocalItem(), conflict.getTargetLocalItem());
+        return new TfsConflictInfo(
+            conflict.getConflictID(),
+            conflictTypeName(conflict.getType()),
+            serverPath,
+            localPath,
+            conflict.getYourServerItem(),
+            conflict.getTheirServerItem(),
+            conflict.getBaseServerItem(),
+            conflict.isResolved()
+        );
+    }
+
+    /**
+     * 返回冲突类型的稳定字符串名称，避免直接依赖枚举 toString。
+     */
+    private String conflictTypeName(ConflictType type) {
+        if (ConflictType.GET.equals(type)) {
+            return "get";
+        }
+        if (ConflictType.CHECKIN.equals(type)) {
+            return "checkin";
+        }
+        if (ConflictType.LOCAL.equals(type)) {
+            return "local";
+        }
+        if (ConflictType.MERGE.equals(type)) {
+            return "merge";
+        }
+        if (ConflictType.NONE.equals(type)) {
+            return "none";
+        }
+        return "unknown";
+    }
+
+    /**
+     * 读取本地文件字节并按二进制识别和大小阈值套用文本内容约束。
+     */
+    private TfsFileContent buildFileContent(String serverPath, int changeset, File file, List<String> logs) throws IOException {
+        byte[] bytes = Files.readAllBytes(file.toPath());
+        long size = bytes.length;
+        boolean binary = isBinaryContent(bytes);
+        boolean tooLarge = size > MAX_TEXT_CONTENT_BYTES;
+        if (binary || tooLarge) {
+            logs.add("File content skipped (binary=" + binary + ", tooLarge=" + tooLarge + ", size=" + size + ")");
+            return new TfsFileContent(serverPath, changeset, "", binary, size, tooLarge);
+        }
+        return new TfsFileContent(serverPath, changeset, new String(bytes, TEXT_CHARSET), false, size, false);
+    }
+
+    /**
+     * 通过嗅探前若干字节是否包含空字节判断内容是否为二进制。
+     */
+    private boolean isBinaryContent(byte[] bytes) {
+        int limit = (int) Math.min(bytes.length, (long) BINARY_SNIFF_BYTES);
+        for (int index = 0; index < limit; index++) {
+            if (bytes[index] == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 返回第一个非空字符串，供冲突路径回退使用。
+     */
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (value != null && value.trim().length() > 0) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private <T> CoreOperationResult<T> execute(String operation, CoreCallable<T> callable) {
@@ -1606,12 +1816,16 @@ public class MacTfsCoreService {
         private final int changeset;
         private final String content;
         private final boolean binary;
+        private final long size;
+        private final boolean tooLarge;
 
-        public TfsFileContent(String serverPath, int changeset, String content, boolean binary) {
+        public TfsFileContent(String serverPath, int changeset, String content, boolean binary, long size, boolean tooLarge) {
             this.serverPath = serverPath;
             this.changeset = changeset;
             this.content = content;
             this.binary = binary;
+            this.size = size;
+            this.tooLarge = tooLarge;
         }
 
         public String getServerPath() {
@@ -1628,6 +1842,99 @@ public class MacTfsCoreService {
 
         public boolean isBinary() {
             return binary;
+        }
+
+        public long getSize() {
+            return size;
+        }
+
+        public boolean isTooLarge() {
+            return tooLarge;
+        }
+    }
+
+    public static class TfsConflictInfo {
+        private final int conflictId;
+        private final String type;
+        private final String serverPath;
+        private final String localPath;
+        private final String yourServerItem;
+        private final String theirServerItem;
+        private final String baseServerItem;
+        private final boolean resolved;
+
+        public TfsConflictInfo(int conflictId, String type, String serverPath, String localPath,
+                               String yourServerItem, String theirServerItem, String baseServerItem, boolean resolved) {
+            this.conflictId = conflictId;
+            this.type = type;
+            this.serverPath = serverPath;
+            this.localPath = localPath;
+            this.yourServerItem = yourServerItem;
+            this.theirServerItem = theirServerItem;
+            this.baseServerItem = baseServerItem;
+            this.resolved = resolved;
+        }
+
+        public int getConflictId() {
+            return conflictId;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public String getServerPath() {
+            return serverPath;
+        }
+
+        public String getLocalPath() {
+            return localPath;
+        }
+
+        public String getYourServerItem() {
+            return yourServerItem;
+        }
+
+        public String getTheirServerItem() {
+            return theirServerItem;
+        }
+
+        public String getBaseServerItem() {
+            return baseServerItem;
+        }
+
+        public boolean isResolved() {
+            return resolved;
+        }
+    }
+
+    public static class TfsConflictResolution {
+        private final int conflictId;
+        private final String resolution;
+        private final boolean resolved;
+        private final int remainingConflicts;
+
+        public TfsConflictResolution(int conflictId, String resolution, boolean resolved, int remainingConflicts) {
+            this.conflictId = conflictId;
+            this.resolution = resolution;
+            this.resolved = resolved;
+            this.remainingConflicts = remainingConflicts;
+        }
+
+        public int getConflictId() {
+            return conflictId;
+        }
+
+        public String getResolution() {
+            return resolution;
+        }
+
+        public boolean isResolved() {
+            return resolved;
+        }
+
+        public int getRemainingConflicts() {
+            return remainingConflicts;
         }
     }
 

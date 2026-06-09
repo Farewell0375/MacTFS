@@ -1,2 +1,28 @@
-export type { ApiRequestOptions, ApiResponse, ApiResult } from "./types"
+export type {
+  ApiRequestOptions,
+  ApiResponse,
+  ApiResult,
+  AppConfig,
+  CheckMappingTargetResult,
+  CheckinResult,
+  Collection,
+  ConflictInfo,
+  ConflictResolution,
+  ConflictResolutionResult,
+  ConnectResult,
+  FileContent,
+  FileOperationResult,
+  FolderDiffItem,
+  GetLatestResult,
+  HistoryEntry,
+  MappingConfig,
+  MappingInfo,
+  OperationLogEntry,
+  PendingChange,
+  ServerItem,
+  TextDiff,
+  WorkspaceContext,
+  WorkspaceInfo,
+} from "./types"
 export { apiClient } from "./client"
+export * as api from "./endpoints"

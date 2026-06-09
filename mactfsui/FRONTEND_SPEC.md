@@ -300,6 +300,7 @@ Auth: Authorization: Bearer <token>
 | Changeset 文件 | GET | `/api/history/changeset` |
 | 本地 vs latest Diff | POST | `/api/diff/local-latest` |
 | 历史版本 Diff | POST | `/api/diff/revisions` |
+| 冲突明细 | GET | `/api/conflicts` |
 | 冲突应用 | POST | `/api/conflicts/apply` |
 | 操作日志 | GET | `/api/logs` |
 
@@ -558,12 +559,15 @@ chmod 644 <file>
 
 ## 十三、当前分支现状
 
-`FE-001` 已完成，前端基础设施已就绪：
+`FE-001`、`FE-002` 已完成，前端基础设施与接口契约已就绪：
 
 - `electron/main.cjs` 已补齐服务检测、按本地开发约定拉起服务、token 读取与目录选择
 - `electron/preload.cjs` 已落地，通过 `contextBridge` 暴露 `window.mactfs` 窄接口
 - `app/lib/electron` 已提供渲染层桥接（含非 Electron / SSR 兜底）
-- `app/lib/api` 已提供统一 API client（自动携带 Bearer token、统一错误处理）
+- `app/lib/api/client.ts` 已提供统一 API client（自动携带 Bearer token、统一错误处理）
+- `app/lib/api/types.ts` 已补齐前端统一领域类型契约
+- `app/lib/api/endpoints.ts` 已封装全部工作台所需接口（含 workspace/context、mappings/check-target、files/content、conflicts）
+- 服务端已补齐 `GET /api/workspace/context`、`POST /api/mappings/check-target`、`GET /api/files/content`、`GET /api/conflicts`、`POST /api/conflicts/apply`
 - `home.tsx` 暂为引导态：检测 / 拉起本地服务并提供重试入口
 
 仍未建立：
@@ -572,4 +576,4 @@ chmod 644 <file>
 - 三栏工作台布局与折叠面板（FE-004）
 - 目录树、中间列表、右键菜单、各业务弹窗（FE-005 起）
 
-因此当前前端开发应从 `FE-002` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。
+因此当前前端开发应从 `FE-003` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。
