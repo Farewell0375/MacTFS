@@ -257,9 +257,10 @@ TFS 的 Workspace 模型天然绑定：
 ### 2. 功能范围
 
 - 登录页
-- Workspace 管理页
-- 映射配置页
-- 执行 Get Latest 的操作页
+- Collection 选择
+- 固定 Collection / Workspace 工作台
+- 映射配置弹窗
+- 执行 Get Latest 的操作入口
 - 日志输出区域
 
 ### 3. 页面范围
@@ -273,11 +274,12 @@ TFS 的 Workspace 模型天然绑定：
 - Password
 - 连接测试按钮
 
-#### Workspace 页
+#### 上下文确认
 
-- 列出已有 Workspace
-- 创建 Workspace
-- 选择 Workspace
+- 登录成功后加载 Collection
+- 用户确认 Collection
+- 系统自动查找或创建默认 Workspace
+- 工作台内不提供 Workspace 手动选择
 
 #### 映射页
 
@@ -294,7 +296,8 @@ TFS 的 Workspace 模型天然绑定：
 ### 4. 验收标准
 
 - 用户可通过界面完成登录
-- 用户可通过界面完成 Workspace 选择或创建
+- 用户可通过界面确认 Collection
+- 用户进入工作台后可自动使用或创建默认 Workspace
 - 用户可通过界面完成映射配置
 - 用户可通过界面执行 Get Latest
 

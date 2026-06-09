@@ -15,7 +15,8 @@ feature
 ## 依赖任务
 
 - FEATURE-001
-- FE-006
+- FE-007
+- FE-009
 - SERVER-006
 - SERVER-007
 
@@ -25,15 +26,15 @@ feature
 
 ## 目标
 
-验证 Mapping 创建和 Get Latest 的完整链路。
+验证 Mapping 弹窗、目录选择、是否立即 Get Latest，以及后续独立执行 Get Latest 的完整链路。
 
 ## 实现范围
 
 - 选择服务端目录
-- 映射到本地目录
+- 通过弹窗映射到本地目录
 - 选择是否立即 Get Latest
 - 对文件 / 目录 / Mapping 执行 Get Latest
-- 展示下载结果
+- 展示下载结果、跳过项和冲突反馈
 
 ## 不在范围
 
@@ -49,8 +50,9 @@ feature
 ## 验收标准
 
 - Mapping 能保存到 Workspace
-- 不立即下载时状态为 notDownloaded
+- 不立即下载时状态为 `notDownloaded`
 - 后续可单独下载下级文件或目录
+- 有冲突或跳过项时前端反馈清晰
 
 ## 测试方式
 

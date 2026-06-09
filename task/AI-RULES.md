@@ -9,7 +9,16 @@ AI 执行任何任务前，必须读取：
 - [task/AI-RULES.md](/Users/fenghp/Desktop/DEV/project/mydev/task/AI-RULES.md)
 - 当前任务文件
 
+如果任务属于前端阶段，或任务会影响前端交互、布局、接口对接，还必须读取：
+
+- [mactfsui/FRONTEND_SPEC.md](/Users/fenghp/Desktop/DEV/project/mydev/mactfsui/FRONTEND_SPEC.md)
+
 如果任务涉及源码，还必须读取相关模块现有代码，优先复用项目已有写法。
+
+说明：
+
+- `task/frontend` 是当前唯一有效的前端阶段任务目录。
+- `task/frontend-refactor` 已并入 `task/frontend`，仅保留归档说明，不再作为当前任务来源。
 
 ## 二、任务状态更新
 

@@ -4,10 +4,16 @@
 
 - 每次开发任务前，AI 必须先读取 [AI-RULES.md](/Users/fenghp/Desktop/DEV/project/mydev/task/AI-RULES.md)。
 - 每次开发任务前，AI 必须读取 [mactfs-api-product-prd.md](/Users/fenghp/Desktop/DEV/project/mydev/docs/mactfs-api-product-prd.md)。
+- 前端相关任务还必须读取 [mactfsui/FRONTEND_SPEC.md](/Users/fenghp/Desktop/DEV/project/mydev/mactfsui/FRONTEND_SPEC.md)。
 - 每次开发任务前，AI 必须读取当前任务文件。
 - 开始任务时，将任务状态改为 `doing`。
 - 完成任务后，将任务状态改为 `done`，填写完成记录，并更新本看板。
 - 阻塞任务必须标记为 `blocked`，并写清阻塞原因和需要的输入。
+
+说明：
+
+- `task/frontend` 是当前唯一有效的前端阶段目录。
+- `task/frontend-refactor` 已归档，设计结论已并入 `task/frontend` 和 `mactfsui/FRONTEND_SPEC.md`。
 
 ## 状态枚举
 
@@ -32,11 +38,15 @@ blocked
 
 ## 当前阶段
 
-Frontend
+Frontend Workspace UI
+
+## 前端规范
+
+- [mactfsui/FRONTEND_SPEC.md](/Users/fenghp/Desktop/DEV/project/mydev/mactfsui/FRONTEND_SPEC.md)
 
 ## 下一步任务
 
-- [FE-001-实现Electron启动服务与API客户端.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-001-实现Electron启动服务与API客户端.md)
+- [FE-001-实现Electron启动服务Preload与API客户端.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-001-实现Electron启动服务Preload与API客户端.md)
 
 ## Core
 
@@ -81,19 +91,19 @@ Frontend
 
 | 任务 | 状态 | 优先级 |
 |---|---|---|
-| [FE-001-实现Electron启动服务与API客户端.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-001-实现Electron启动服务与API客户端.md) | todo | P0 |
-| [FE-002-实现登录配置页.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-002-实现登录配置页.md) | todo | P0 |
-| [FE-003-实现VS风格主布局.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-003-实现VS风格主布局.md) | todo | P0 |
-| [FE-004-实现Collection服务端目录树.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-004-实现Collection服务端目录树.md) | todo | P0 |
-| [FE-005-实现中间目录文件列表.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-005-实现中间目录文件列表.md) | todo | P0 |
-| [FE-006-实现Mapping创建流程.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-006-实现Mapping创建流程.md) | todo | P0 |
-| [FE-007-实现目录对比页面.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-007-实现目录对比页面.md) | todo | P0 |
-| [FE-008-实现右侧挂起更改面板.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-008-实现右侧挂起更改面板.md) | todo | P0 |
-| [FE-009-实现文件操作交互.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-009-实现文件操作交互.md) | todo | P0 |
-| [FE-010-实现签入流程.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-010-实现签入流程.md) | todo | P0 |
-| [FE-011-实现历史记录界面.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-011-实现历史记录界面.md) | todo | P0 |
-| [FE-012-实现文件Diff界面.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-012-实现文件Diff界面.md) | todo | P0 |
-| [FE-013-实现操作日志面板.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-013-实现操作日志面板.md) | todo | P1 |
+| [FE-001-实现Electron启动服务Preload与API客户端.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-001-实现Electron启动服务Preload与API客户端.md) | todo | P0 |
+| [FE-002-补齐前端集成所需服务端接口与类型契约.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-002-补齐前端集成所需服务端接口与类型契约.md) | todo | P0 |
+| [FE-003-实现连接页Collection选择与Workspace上下文.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-003-实现连接页Collection选择与Workspace上下文.md) | todo | P0 |
+| [FE-004-实现工作台布局折叠面板与同步导航.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-004-实现工作台布局折叠面板与同步导航.md) | todo | P0 |
+| [FE-005-实现服务端目录树与当前目录文件列表.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-005-实现服务端目录树与当前目录文件列表.md) | todo | P0 |
+| [FE-006-实现对象右键菜单与通用动作模型.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-006-实现对象右键菜单与通用动作模型.md) | todo | P0 |
+| [FE-007-实现MappingHistory与目录对比弹窗.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-007-实现MappingHistory与目录对比弹窗.md) | todo | P0 |
+| [FE-008-实现文件查看与Diff弹窗.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-008-实现文件查看与Diff弹窗.md) | todo | P0 |
+| [FE-009-实现GetLatest与Checkout冲突处理.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-009-实现GetLatest与Checkout冲突处理.md) | todo | P0 |
+| [FE-010-实现PendingChanges与Checkin体验.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-010-实现PendingChanges与Checkin体验.md) | todo | P0 |
+| [FE-011-拆分FolderItemsPanel与收口动作编排.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-011-拆分FolderItemsPanel与收口动作编排.md) | todo | P1 |
+| [FE-012-实现操作日志面板与刷新反馈.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-012-实现操作日志面板与刷新反馈.md) | todo | P1 |
+| [FE-013-前端阶段联调验收基线.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-013-前端阶段联调验收基线.md) | todo | P0 |
 
 ## Feature E2E
 

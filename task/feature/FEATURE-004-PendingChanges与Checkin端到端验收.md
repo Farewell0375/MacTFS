@@ -15,7 +15,6 @@ feature
 ## 依赖任务
 
 - FEATURE-003
-- FE-008
 - FE-010
 
 ## 需求来源
@@ -24,7 +23,7 @@ feature
 
 ## 目标
 
-验证右侧挂起更改、Included / Excluded 和签入完整链路。
+验证右侧 Changes 面板、Included / Excluded 和签入链路。
 
 ## 实现范围
 
@@ -53,6 +52,7 @@ feature
 - Excluded 不参与签入
 - 成功后 Included 清空
 - changeset 编号可见
+- 签入后当前目录和 Pending Changes 刷新
 
 ## 测试方式
 
