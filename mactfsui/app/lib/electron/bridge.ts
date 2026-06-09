@@ -5,6 +5,9 @@ export interface ServiceStatus {
   message: string
   tokenFile: string
   configFile?: string
+  javaArch?: string
+  javaHome?: string
+  nativeCompatible?: boolean
   started?: boolean
 }
 

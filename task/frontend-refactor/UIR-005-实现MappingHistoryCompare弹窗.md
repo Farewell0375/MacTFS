@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -73,9 +73,19 @@ pnpm typecheck
 
 ## 完成记录
 
-待完成后填写：
-
 - 实际修改文件：
+  - `mactfsui/app/components/app/simple-dialog.tsx`
+  - `mactfsui/app/components/explorer/mapping-dialog.tsx`
+  - `mactfsui/app/components/explorer/folder-compare-dialog.tsx`
+  - `mactfsui/app/components/explorer/folder-items-panel.tsx`
+  - `mactfsui/app/components/explorer/history-panel.tsx`
 - 实际实现内容：
+  - 新增通用弹窗组件。
+  - Mapping 创建迁移到弹窗，支持输入/选择本地目录和是否立即 Get Latest。
+  - History 改为通过弹窗打开。
+  - 目录对比改为弹窗，支持隐藏已同步和按状态筛选。
+  - 目录对比结果项通过右键菜单执行 Diff、Get Latest、Checkout、Add、Delete、Undo。
 - 测试结果：
+  - 已执行 `pnpm typecheck`，通过。
 - 遗留问题：
+  - 未在真实 TFS 工作区执行新增本地文件到服务器。

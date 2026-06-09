@@ -29,6 +29,15 @@ export interface TfsMappingInfo {
   localPath: string
 }
 
+export interface TfsWorkspaceInfo {
+  name: string
+  ownerName: string
+  computer: string
+  comment: string
+  created: boolean
+  mappings: TfsMappingInfo[]
+}
+
 export interface AppConfig {
   serverUri?: string
   authType?: string
@@ -47,6 +56,16 @@ export interface ConfigData {
 export interface ConnectData {
   serverUri?: string
   collectionCount?: number
+}
+
+export interface WorkspaceContextRequest {
+  collection: string
+}
+
+export interface WorkspaceContextData {
+  collection: string
+  workspace?: TfsWorkspaceInfo
+  mappings: TfsMappingInfo[]
 }
 
 export interface TfsCollectionInfo {
@@ -161,6 +180,8 @@ export interface TfsGetLatestResult {
   operations: number
   conflicts: number
   failures: number
+  skipped?: string[]
+  conflictDetails?: TfsConflictInfo[]
 }
 
 export interface GetLatestData {
@@ -176,6 +197,8 @@ export interface TfsFileOperationResult {
   operation: string
   affected: number
   failures: string[]
+  skipped?: string[]
+  conflictDetails?: TfsConflictInfo[]
 }
 
 export interface FileOperationData {
@@ -234,6 +257,43 @@ export interface TfsTextDiff {
 
 export interface TextDiffData {
   diff?: TfsTextDiff
+}
+
+export interface TfsFileContent {
+  serverPath: string
+  localPath?: string
+  changeset: number
+  source: "local" | "server"
+  size: number
+  binary: boolean
+  renderable: boolean
+  encoding: string
+  content: string
+}
+
+export interface FileContentRequest {
+  serverPath: string
+  localPath?: string
+  preferLocal?: boolean
+}
+
+export interface FileContentData {
+  file?: TfsFileContent
+}
+
+export interface TfsConflictInfo {
+  serverPath: string
+  localPath?: string
+  fileSize: number
+  binary: boolean
+  renderable: boolean
+  autoMergeable: boolean
+  reason: string
+}
+
+export interface ApplyConflictChoiceRequest {
+  serverPath: string
+  choice: "useServer" | "keepLocal" | "autoMerge"
 }
 
 export interface TfsOperationLogEntry {

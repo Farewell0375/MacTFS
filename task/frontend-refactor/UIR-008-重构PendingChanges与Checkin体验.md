@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -71,9 +71,16 @@ pnpm typecheck
 
 ## 完成记录
 
-待完成后填写：
-
 - 实际修改文件：
+  - `mactfsui/app/components/inspector/pending-changes-panel.tsx`
+  - `mactfsui/app/routes/home.tsx`
 - 实际实现内容：
+  - Checkin 保留在右侧 Changes 面板，不使用弹窗。
+  - Included / Excluded 继续保留并支持组间移动。
+  - Pending Changes 项新增右键菜单，支持查看、比较、撤销、查看历史、移入 Included、移入 Excluded。
+  - pending add 文件隐藏服务器比较入口。
+  - Checkin 成功后触发当前目录刷新和 Pending Changes 刷新。
 - 测试结果：
+  - 已执行 `pnpm typecheck`，通过。
 - 遗留问题：
+  - 未执行真实 Checkin，避免默认修改 TFS 服务端状态。

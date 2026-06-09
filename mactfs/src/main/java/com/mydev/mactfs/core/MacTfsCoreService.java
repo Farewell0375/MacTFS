@@ -39,6 +39,7 @@ import com.microsoft.tfs.core.httpclient.DefaultNTCredentials;
 import com.microsoft.tfs.core.httpclient.UsernamePasswordCredentials;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
@@ -61,6 +62,7 @@ public class MacTfsCoreService {
 
     private static final int HISTORY_LIMIT = 100;
     private static final Charset TEXT_CHARSET = Charset.forName("UTF-8");
+    private static final long MAX_RENDER_BYTES = 5L * 1024L * 1024L;
 
     /**
      * 验证 TFS 地址和账号可用性，并返回当前账号可见 Collection 数量。
@@ -232,16 +234,24 @@ public class MacTfsCoreService {
                 Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
                 GetStatus status;
                 String normalizedPath = serverPath == null || serverPath.trim().isEmpty() ? null : normalizeServerPath(serverPath);
+                List<TfsConflictInfo> skipped = normalizedPath == null
+                    ? Collections.<TfsConflictInfo>emptyList()
+                    : pendingEditConflictInfos(queryPendingChanges(workspace, Arrays.asList(normalizedPath), recursive));
                 if (normalizedPath == null) {
                     status = workspace.get(GetOptions.GET_ALL.combine(GetOptions.OVERWRITE));
                     logs.add("Get latest workspace: " + workspace.getName());
+                } else if (!skipped.isEmpty()) {
+                    GetRequest[] requests = nonPendingGetRequests(workspace, normalizedPath, recursive, skipped);
+                    status = requests.length == 0 ? null : workspace.get(requests, GetOptions.GET_ALL);
+                    logs.add("Get latest path: " + normalizedPath);
+                    logs.add("Skipped pending edit items: " + skipped.size());
                 } else {
                     RecursionType recursionType = recursive ? RecursionType.FULL : RecursionType.NONE;
                     GetRequest request = new GetRequest(new ItemSpec(normalizedPath, recursionType), LatestVersionSpec.INSTANCE);
-                    status = workspace.get(new GetRequest[]{request}, GetOptions.GET_ALL.combine(GetOptions.OVERWRITE));
+                    status = workspace.get(new GetRequest[]{request}, GetOptions.GET_ALL);
                     logs.add("Get latest path: " + normalizedPath);
                 }
-                return toGetLatestResult(status);
+                return toGetLatestResult(status, skipped);
             }
         });
     }
@@ -278,10 +288,28 @@ public class MacTfsCoreService {
             public TfsFileOperationResult call(List<String> logs) throws Exception {
                 Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
                 String[] items = toRequiredArray(paths, "paths");
+                List<String> skipped = new ArrayList<String>();
+                List<TfsConflictInfo> conflicts = new ArrayList<TfsConflictInfo>();
+                for (String item : items) {
+                    if (isServerPath(item)) {
+                        CoreOperationResult<TfsGetLatestResult> latest = getLatest(config, collectionName, workspaceName, item, recursive);
+                        if (!latest.isSuccess()) {
+                            throw new IllegalStateException(latest.getErrorMessage());
+                        }
+                        if (latest.getData() != null) {
+                            skipped.addAll(latest.getData().getSkipped());
+                            conflicts.addAll(latest.getData().getConflictDetails());
+                        }
+                    }
+                }
+                if (!conflicts.isEmpty()) {
+                    logs.add("Checkout stopped by conflicts: " + conflicts.size());
+                    return new TfsFileOperationResult("checkout", 0, Collections.<String>emptyList(), skipped, conflicts);
+                }
                 RecursionType recursionType = recursive ? RecursionType.FULL : RecursionType.NONE;
                 int affected = workspace.pendEdit(items, recursionType, LockLevel.NONE, null, GetOptions.NONE, PendChangesOptions.NONE);
                 logs.add("Checkout affected: " + affected);
-                return new TfsFileOperationResult("checkout", affected, Collections.<String>emptyList());
+                return new TfsFileOperationResult("checkout", affected, Collections.<String>emptyList(), skipped, conflicts);
             }
         });
     }
@@ -513,9 +541,26 @@ public class MacTfsCoreService {
                     GetItemsOptions.DOWNLOAD
                 );
                 File tempFile = item.downloadFileToTempLocation(connection.versionControlClient, "mactfs");
-                String content = new String(Files.readAllBytes(tempFile.toPath()), TEXT_CHARSET);
                 logs.add("File content loaded: " + item.getServerItem());
-                return new TfsFileContent(item.getServerItem(), item.getChangeSetID(), content, false);
+                return readFileContent(item.getServerItem(), null, item.getChangeSetID(), "server", tempFile);
+            }
+        });
+    }
+
+    /**
+     * 读取本地文件内容，供 UI 在服务端完成 Mapping 边界校验后展示映射目录内文件。
+     */
+    public CoreOperationResult<TfsFileContent> getLocalFileContent(final String serverPath,
+                                                                  final String localPath) {
+        return execute("getLocalFileContent", new CoreCallable<TfsFileContent>() {
+            @Override
+            public TfsFileContent call(List<String> logs) throws Exception {
+                File file = new File(require(localPath, "localPath"));
+                if (!file.isFile()) {
+                    throw new IllegalArgumentException("Local file not found: " + localPath);
+                }
+                logs.add("Local file content loaded: " + file.getAbsolutePath());
+                return readFileContent(serverPath, file.getAbsolutePath(), 0, "local", file);
             }
         });
     }
@@ -534,8 +579,14 @@ public class MacTfsCoreService {
                 if (!latest.isSuccess()) {
                     throw new IllegalStateException(latest.getErrorMessage());
                 }
-                String localContent = new String(Files.readAllBytes(new File(require(localPath, "localPath")).toPath()), TEXT_CHARSET);
-                TfsTextDiff diff = buildTextDiff(localPath, serverPath, localContent, latest.getData().getContent());
+                TfsFileContent local = readFileContent(serverPath, new File(require(localPath, "localPath")).getAbsolutePath(), 0, "local", new File(localPath));
+                if (latest.getData() == null || !latest.getData().isRenderable()) {
+                    throw new IllegalArgumentException("Server latest is not text renderable");
+                }
+                if (!local.isRenderable()) {
+                    throw new IllegalArgumentException("Local file is not text renderable");
+                }
+                TfsTextDiff diff = buildTextDiff(localPath, serverPath, local.getContent(), latest.getData().getContent());
                 logs.add("Text diff lines: " + diff.getLines().size());
                 return diff;
             }
@@ -560,6 +611,12 @@ public class MacTfsCoreService {
                 }
                 if (!target.isSuccess()) {
                     throw new IllegalStateException(target.getErrorMessage());
+                }
+                if (source.getData() == null || !source.getData().isRenderable()) {
+                    throw new IllegalArgumentException("Source revision is not text renderable");
+                }
+                if (target.getData() == null || !target.getData().isRenderable()) {
+                    throw new IllegalArgumentException("Target revision is not text renderable");
                 }
                 TfsTextDiff diff = buildTextDiff(
                     serverPath + ";C" + sourceChangeset,
@@ -761,6 +818,46 @@ public class MacTfsCoreService {
     }
 
     /**
+     * 读取文件内容元数据，大文件和二进制文件只返回大小和可渲染状态，避免 UI 直接加载不可展示内容。
+     */
+    private TfsFileContent readFileContent(String serverPath, String localPath, int changeset, String source, File file) throws IOException {
+        long size = file.length();
+        boolean binary = isBinaryFile(file);
+        boolean renderable = !binary && size <= MAX_RENDER_BYTES;
+        String content = renderable ? new String(Files.readAllBytes(file.toPath()), TEXT_CHARSET) : "";
+        return new TfsFileContent(
+            serverPath,
+            localPath,
+            changeset,
+            source,
+            size,
+            binary,
+            renderable,
+            TEXT_CHARSET.name(),
+            content
+        );
+    }
+
+    /**
+     * 通过文件前 8KB 的 NUL 字节判断二进制文件，满足第一版文本查看的最小识别需求。
+     */
+    private boolean isBinaryFile(File file) throws IOException {
+        FileInputStream inputStream = new FileInputStream(file);
+        try {
+            byte[] buffer = new byte[8192];
+            int length = inputStream.read(buffer);
+            for (int index = 0; index < length; index++) {
+                if (buffer[index] == 0) {
+                    return true;
+                }
+            }
+            return false;
+        } finally {
+            inputStream.close();
+        }
+    }
+
+    /**
      * 根据 pending change、工作区本地版本和服务端最新版本计算目录对比状态。
      */
     private String resolveDiffStatus(ExtendedItem item, PendingChange pendingChange, File localFile) {
@@ -832,13 +929,92 @@ public class MacTfsCoreService {
         return result;
     }
 
-    private TfsGetLatestResult toGetLatestResult(GetStatus status) {
+    private TfsGetLatestResult toGetLatestResult(GetStatus status, List<TfsConflictInfo> skipped) {
+        int updated = status == null ? 0 : status.getNumUpdated();
+        int operations = status == null ? 0 : status.getNumOperations();
+        int failures = status == null ? 0 : status.getNumFailures();
         return new TfsGetLatestResult(
-            status.getNumUpdated(),
-            status.getNumOperations(),
-            status.getNumConflicts(),
-            status.getNumFailures()
+            updated,
+            operations,
+            skipped == null ? 0 : skipped.size(),
+            failures,
+            skipped == null ? Collections.<String>emptyList() : conflictServerPaths(skipped),
+            skipped == null ? Collections.<TfsConflictInfo>emptyList() : skipped
         );
+    }
+
+    /**
+     * 从 pending edit 列表生成 UI 冲突明细，Get Latest 不覆盖用户本地修改。
+     */
+    private List<TfsConflictInfo> pendingEditConflictInfos(PendingChange[] pendingChanges) {
+        List<TfsConflictInfo> result = new ArrayList<TfsConflictInfo>();
+        if (pendingChanges == null) {
+            return result;
+        }
+        for (PendingChange change : pendingChanges) {
+            if (change != null && change.isEdit()) {
+                result.add(new TfsConflictInfo(
+                    change.getServerItem(),
+                    change.getLocalItem(),
+                    fileSize(change.getLocalItem()),
+                    false,
+                    true,
+                    true,
+                    "pendingEdit"
+                ));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 对递归 Get Latest 过滤掉 pending edit 子项，只同步其余服务端项。
+     */
+    private GetRequest[] nonPendingGetRequests(Workspace workspace, String serverPath, boolean recursive, List<TfsConflictInfo> skipped) {
+        if (!recursive) {
+            return new GetRequest[0];
+        }
+        Map<String, TfsConflictInfo> skippedByPath = new LinkedHashMap<String, TfsConflictInfo>();
+        for (TfsConflictInfo conflict : skipped) {
+            skippedByPath.put(conflict.getServerPath().toLowerCase(), conflict);
+        }
+        Map<String, ExtendedItem> serverItems = queryExtendedItems(workspace, serverPath, true);
+        List<GetRequest> requests = new ArrayList<GetRequest>();
+        for (String itemServerPath : serverItems.keySet()) {
+            if (!skippedByPath.containsKey(itemServerPath.toLowerCase())) {
+                requests.add(new GetRequest(new ItemSpec(itemServerPath, RecursionType.NONE), LatestVersionSpec.INSTANCE));
+            }
+        }
+        return requests.toArray(new GetRequest[requests.size()]);
+    }
+
+    /**
+     * 提取冲突明细中的服务端路径，兼容旧 UI 只展示跳过路径列表的场景。
+     */
+    private List<String> conflictServerPaths(List<TfsConflictInfo> conflicts) {
+        List<String> result = new ArrayList<String>();
+        for (TfsConflictInfo conflict : conflicts) {
+            result.add(conflict.getServerPath());
+        }
+        return result;
+    }
+
+    /**
+     * 判断传入路径是否是 TFS 服务端路径。
+     */
+    private boolean isServerPath(String path) {
+        return path != null && path.trim().startsWith("$/");
+    }
+
+    /**
+     * 返回本地文件大小，文件不存在时按 0 处理，避免冲突明细缺字段。
+     */
+    private long fileSize(String localPath) {
+        if (localPath == null || localPath.trim().isEmpty()) {
+            return 0L;
+        }
+        File file = new File(localPath);
+        return file.isFile() ? file.length() : 0L;
     }
 
     private List<TfsPendingChangeInfo> toPendingChanges(PendingChange[] pendingChanges) {
@@ -1384,12 +1560,20 @@ public class MacTfsCoreService {
         private final int operations;
         private final int conflicts;
         private final int failures;
+        private final List<String> skipped;
+        private final List<TfsConflictInfo> conflictDetails;
 
         public TfsGetLatestResult(int updated, int operations, int conflicts, int failures) {
+            this(updated, operations, conflicts, failures, Collections.<String>emptyList(), Collections.<TfsConflictInfo>emptyList());
+        }
+
+        public TfsGetLatestResult(int updated, int operations, int conflicts, int failures, List<String> skipped, List<TfsConflictInfo> conflictDetails) {
             this.updated = updated;
             this.operations = operations;
             this.conflicts = conflicts;
             this.failures = failures;
+            this.skipped = skipped;
+            this.conflictDetails = conflictDetails;
         }
 
         public int getUpdated() {
@@ -1406,6 +1590,14 @@ public class MacTfsCoreService {
 
         public int getFailures() {
             return failures;
+        }
+
+        public List<String> getSkipped() {
+            return skipped;
+        }
+
+        public List<TfsConflictInfo> getConflictDetails() {
+            return conflictDetails;
         }
     }
 
@@ -1461,11 +1653,19 @@ public class MacTfsCoreService {
         private final String operation;
         private final int affected;
         private final List<String> failures;
+        private final List<String> skipped;
+        private final List<TfsConflictInfo> conflictDetails;
 
         public TfsFileOperationResult(String operation, int affected, List<String> failures) {
+            this(operation, affected, failures, Collections.<String>emptyList(), Collections.<TfsConflictInfo>emptyList());
+        }
+
+        public TfsFileOperationResult(String operation, int affected, List<String> failures, List<String> skipped, List<TfsConflictInfo> conflictDetails) {
             this.operation = operation;
             this.affected = affected;
             this.failures = failures;
+            this.skipped = skipped;
+            this.conflictDetails = conflictDetails;
         }
 
         public String getOperation() {
@@ -1478,6 +1678,14 @@ public class MacTfsCoreService {
 
         public List<String> getFailures() {
             return failures;
+        }
+
+        public List<String> getSkipped() {
+            return skipped;
+        }
+
+        public List<TfsConflictInfo> getConflictDetails() {
+            return conflictDetails;
         }
     }
 
@@ -1603,13 +1811,27 @@ public class MacTfsCoreService {
 
     public static class TfsFileContent {
         private final String serverPath;
+        private final String localPath;
         private final int changeset;
+        private final String source;
+        private final long size;
+        private final boolean renderable;
+        private final String encoding;
         private final String content;
         private final boolean binary;
 
         public TfsFileContent(String serverPath, int changeset, String content, boolean binary) {
+            this(serverPath, null, changeset, "server", content == null ? 0L : content.length(), binary, !binary, TEXT_CHARSET.name(), content);
+        }
+
+        public TfsFileContent(String serverPath, String localPath, int changeset, String source, long size, boolean binary, boolean renderable, String encoding, String content) {
             this.serverPath = serverPath;
+            this.localPath = localPath;
             this.changeset = changeset;
+            this.source = source;
+            this.size = size;
+            this.renderable = renderable;
+            this.encoding = encoding;
             this.content = content;
             this.binary = binary;
         }
@@ -1618,8 +1840,28 @@ public class MacTfsCoreService {
             return serverPath;
         }
 
+        public String getLocalPath() {
+            return localPath;
+        }
+
         public int getChangeset() {
             return changeset;
+        }
+
+        public String getSource() {
+            return source;
+        }
+
+        public long getSize() {
+            return size;
+        }
+
+        public boolean isRenderable() {
+            return renderable;
+        }
+
+        public String getEncoding() {
+            return encoding;
         }
 
         public String getContent() {
@@ -1628,6 +1870,54 @@ public class MacTfsCoreService {
 
         public boolean isBinary() {
             return binary;
+        }
+    }
+
+    public static class TfsConflictInfo {
+        private final String serverPath;
+        private final String localPath;
+        private final long fileSize;
+        private final boolean binary;
+        private final boolean renderable;
+        private final boolean autoMergeable;
+        private final String reason;
+
+        public TfsConflictInfo(String serverPath, String localPath, long fileSize, boolean binary, boolean renderable, boolean autoMergeable, String reason) {
+            this.serverPath = serverPath;
+            this.localPath = localPath;
+            this.fileSize = fileSize;
+            this.binary = binary;
+            this.renderable = renderable;
+            this.autoMergeable = autoMergeable;
+            this.reason = reason;
+        }
+
+        public String getServerPath() {
+            return serverPath;
+        }
+
+        public String getLocalPath() {
+            return localPath;
+        }
+
+        public long getFileSize() {
+            return fileSize;
+        }
+
+        public boolean isBinary() {
+            return binary;
+        }
+
+        public boolean isRenderable() {
+            return renderable;
+        }
+
+        public boolean isAutoMergeable() {
+            return autoMergeable;
+        }
+
+        public String getReason() {
+            return reason;
         }
     }
 

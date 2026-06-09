@@ -8,7 +8,11 @@ const API_BASE_URL = "http://127.0.0.1:38765"
 const HEALTH_URL = `${API_BASE_URL}/api/health`
 const TOKEN_FILE = path.join(os.homedir(), ".mactfs", "server-token")
 const MACTFS_DIRECTORY = path.resolve(__dirname, "../../mactfs")
-const GRADLE_WRAPPER = path.resolve(__dirname, "../../tfsIntegration/gradlew")
+const RUN_SERVER_SCRIPT = path.resolve(__dirname, "../../mactfs/run-server.sh")
+const BUNDLED_JDK_HOME = path.resolve(
+  __dirname,
+  "../../zulu8.94.0.17-ca-jdk8.0.492-macosx_x64/Contents/Home"
+)
 let serviceStartAttempted = false
 let serviceStartError = ""
 
@@ -86,6 +90,8 @@ async function checkServiceHealth() {
       message: result.message || "ok",
       tokenFile: result.data.tokenFile || TOKEN_FILE,
       configFile: result.data.configFile,
+      javaArch: result.data.javaArch,
+      nativeCompatible: result.data.nativeCompatible,
     }
   } catch (error) {
     return {
@@ -107,14 +113,19 @@ function startLocalService() {
   }
 
   serviceStartAttempted = true
-  if (!fs.existsSync(GRADLE_WRAPPER)) {
-    serviceStartError = `未找到 Gradle 启动脚本：${GRADLE_WRAPPER}`
+  if (!fs.existsSync(RUN_SERVER_SCRIPT)) {
+    serviceStartError = `未找到后端启动脚本：${RUN_SERVER_SCRIPT}`
+    return
+  }
+  if (!fs.existsSync(path.join(BUNDLED_JDK_HOME, "bin", "java"))) {
+    serviceStartError = `未找到项目内置 JDK：${BUNDLED_JDK_HOME}`
     return
   }
 
-  const child = spawn(GRADLE_WRAPPER, ["runServer"], {
+  const child = spawn(RUN_SERVER_SCRIPT, [], {
     cwd: MACTFS_DIRECTORY,
     detached: true,
+    env: serviceEnvironment(),
     stdio: "ignore",
   })
 
@@ -122,6 +133,26 @@ function startLocalService() {
     serviceStartError = error.message
   })
   child.unref()
+}
+
+/**
+ * TFS SDK 随带的 macOS JNI 库只有 x86_64，没有 arm64；Apple Silicon 下必须通过 Rosetta 启动 Java。
+ */
+function shouldUseRosettaJava() {
+  return process.platform === "darwin" && process.arch === "arm64"
+}
+
+/**
+ * 固定本项目随带的 x64 Zulu JDK，避免 Electron 继承系统 arm64 Java 导致 TFS JNI 加载失败。
+ */
+function serviceEnvironment() {
+  return {
+    ...process.env,
+    JAVA_HOME: BUNDLED_JDK_HOME,
+    PATH: `${path.join(BUNDLED_JDK_HOME, "bin")}${path.delimiter}${
+      process.env.PATH || ""
+    }`,
+  }
 }
 
 /**
@@ -159,7 +190,9 @@ async function ensureServiceStatus() {
     started: serviceStartAttempted,
     message:
       serviceStartError ||
-      "本地 API 服务未就绪，请确认 Java 8、Gradle 和 TFS 依赖可用。",
+      (shouldUseRosettaJava()
+        ? `本地 API 服务未就绪。请确认 Rosetta 可用，项目内置 JDK 路径为：${BUNDLED_JDK_HOME}`
+        : "本地 API 服务未就绪，请确认 Java 8、Gradle 和 TFS 依赖可用。"),
   }
 }
 

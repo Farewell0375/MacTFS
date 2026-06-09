@@ -2,34 +2,30 @@ import { useEffect, useState } from "react"
 import {
   ChevronDown,
   ChevronRight,
-  Database,
   FileText,
   Folder,
   Loader2,
 } from "lucide-react"
 
-import { listCollections, listServerTree } from "~/lib/api/endpoints"
-import type { TfsCollectionInfo, TfsServerItem } from "~/lib/api/types"
+import { listServerTree } from "~/lib/api/endpoints"
+import type { TfsServerItem } from "~/lib/api/types"
 
 interface ServerTreePanelProps {
   connected: boolean
-  preferredCollection: string
-  onCollectionSelect(collection: string): void
+  collection: string
+  selectedPath: string
   onPathSelect(path: string): void
 }
 
 /**
- * 渲染 Collection 与服务端目录树，并在展开目录时按需请求子节点。
+ * 渲染固定 Collection 下的服务端目录树，并在展开目录时按需请求子节点。
  */
 export function ServerTreePanel({
   connected,
-  preferredCollection,
-  onCollectionSelect,
+  collection,
+  selectedPath,
   onPathSelect,
 }: ServerTreePanelProps) {
-  const [collections, setCollections] = useState<TfsCollectionInfo[]>([])
-  const [selectedCollection, setSelectedCollection] = useState("")
-  const [selectedPath, setSelectedPath] = useState("")
   const [expandedPaths, setExpandedPaths] = useState<string[]>([])
   const [itemsByPath, setItemsByPath] = useState<
     Record<string, TfsServerItem[]>
@@ -38,55 +34,22 @@ export function ServerTreePanel({
   const [errorMessage, setErrorMessage] = useState("")
 
   useEffect(() => {
-    if (!connected) {
-      setCollections([])
-      setSelectedCollection("")
-      setSelectedPath("")
+    if (!connected || !collection) {
       setExpandedPaths([])
       setItemsByPath({})
       return
     }
 
-    loadCollections()
-  }, [connected, preferredCollection])
-
-  /**
-   * 加载 Collection 列表，并优先展开当前配置保存的 Collection。
-   */
-  async function loadCollections() {
-    setLoading(true)
-    setErrorMessage("")
-
-    const result = await listCollections()
-    setLoading(false)
-
-    if (!result.success) {
-      setErrorMessage(result.errorMessage || result.message)
-      return
-    }
-
-    setCollections(result.data.collections)
-    const collection =
-      result.data.collections.find(
-        (item) => item.name === preferredCollection
-      ) || result.data.collections[0]
-    if (collection) {
-      selectCollection(collection)
-    }
-  }
-
-  /**
-   * 切换当前 Collection，并加载该 Collection 的服务端根目录。
-   */
-  async function selectCollection(collection: TfsCollectionInfo) {
-    setSelectedCollection(collection.name)
-    setSelectedPath("$/")
     setExpandedPaths(["$/"])
     setItemsByPath({})
-    onCollectionSelect(collection.name)
-    onPathSelect("$/")
-    await loadServerItems(collection.name, "$/")
-  }
+    loadServerItems(collection, "$/")
+  }, [connected, collection])
+
+  useEffect(() => {
+    if (connected && collection && selectedPath) {
+      expandToPath(selectedPath)
+    }
+  }, [connected, collection, selectedPath])
 
   /**
    * 加载指定目录的一层子节点，未映射目录也直接按服务端路径浏览。
@@ -110,10 +73,41 @@ export function ServerTreePanel({
   }
 
   /**
+   * 根据中间文件列表进入的目录路径，展开并选中左侧树对应父级。
+   */
+  async function expandToPath(path: string) {
+    const parents = parentPaths(path)
+    setExpandedPaths((currentPaths) =>
+      Array.from(new Set([...currentPaths, ...parents]))
+    )
+    for (const parent of parents) {
+      if (!itemsByPath[parent]) {
+        await loadServerItems(collection, parent)
+      }
+    }
+  }
+
+  /**
+   * 生成服务端路径的父级目录列表，根路径固定为 $/。
+   */
+  function parentPaths(path: string) {
+    const result = ["$/"]
+    if (!path || path === "$/") {
+      return result
+    }
+    const parts = path.replace(/^\$\//, "").split("/").filter(Boolean)
+    let current = "$"
+    for (let index = 0; index < parts.length - 1; index++) {
+      current = `${current}/${parts[index]}`
+      result.push(current === "$" ? "$/" : current)
+    }
+    return result
+  }
+
+  /**
    * 选中节点并通知中间区域当前服务端路径已变化。
    */
   function selectPath(path: string) {
-    setSelectedPath(path)
     onPathSelect(path)
   }
 
@@ -122,7 +116,7 @@ export function ServerTreePanel({
    */
   async function toggleFolder(item: TfsServerItem) {
     selectPath(item.serverPath)
-    if (!item.folder || !selectedCollection) {
+    if (!item.folder || !collection) {
       return
     }
 
@@ -135,7 +129,7 @@ export function ServerTreePanel({
 
     setExpandedPaths((currentPaths) => [...currentPaths, item.serverPath])
     if (!itemsByPath[item.serverPath]) {
-      await loadServerItems(selectedCollection, item.serverPath)
+      await loadServerItems(collection, item.serverPath)
     }
   }
 
@@ -181,7 +175,7 @@ export function ServerTreePanel({
     })
   }
 
-  if (!connected) {
+  if (!connected || !collection) {
     return <div className="px-2 py-1 text-xs text-muted-foreground">未连接</div>
   }
 
@@ -201,20 +195,9 @@ export function ServerTreePanel({
       )}
 
       <div className="grid gap-1">
-        {collections.map((collection) => (
-          <button
-            key={collection.id || collection.name}
-            className={`flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-left text-xs ${
-              selectedCollection === collection.name
-                ? "bg-background text-foreground"
-                : "text-muted-foreground hover:bg-muted"
-            }`}
-            onClick={() => selectCollection(collection)}
-          >
-            <Database className="size-3.5 shrink-0" />
-            <span className="truncate">{collection.name}</span>
-          </button>
-        ))}
+        <div className="truncate rounded-[6px] bg-background px-2 py-1.5 text-xs font-medium">
+          {collection}
+        </div>
       </div>
 
       <div className="grid gap-0.5 border-t pt-2">
@@ -226,8 +209,8 @@ export function ServerTreePanel({
           }`}
           onClick={() => {
             selectPath("$/")
-            if (selectedCollection && !itemsByPath["$/"]) {
-              loadServerItems(selectedCollection, "$/")
+            if (collection && !itemsByPath["$/"]) {
+              loadServerItems(collection, "$/")
             }
           }}
         >

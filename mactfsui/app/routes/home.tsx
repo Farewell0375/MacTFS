@@ -2,15 +2,22 @@ import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 
 import { AppShell } from "~/components/app/app-shell"
+import { SimpleDialog } from "~/components/app/simple-dialog"
 import { Button } from "~/components/ui/button"
+import { DiffPanel } from "~/components/explorer/diff-panel"
+import type { DiffPanelRequest } from "~/components/explorer/diff-panel"
+import { FileViewerDialog } from "~/components/explorer/file-viewer-dialog"
 import { FolderItemsPanel } from "~/components/explorer/folder-items-panel"
+import { HistoryPanel } from "~/components/explorer/history-panel"
 import { PendingChangesPanel } from "~/components/inspector/pending-changes-panel"
 import { ServerTreePanel } from "~/components/explorer/server-tree-panel"
 import { apiRequest, subscribeApiRequestLogs } from "~/lib/api/client"
 import type { ApiRequestLogEntry } from "~/lib/api/client"
 import {
   connectSession,
+  ensureWorkspaceContext,
   getConfig,
+  listCollections,
   listOperationLogs,
 } from "~/lib/api/endpoints"
 import type {
@@ -18,7 +25,10 @@ import type {
   AppConfig,
   ConnectData,
   HealthData,
+  TfsCollectionInfo,
   TfsOperationLogEntry,
+  TfsPendingChangeInfo,
+  TfsWorkspaceInfo,
 } from "~/lib/api/types"
 import type { ServiceStatus } from "~/lib/electron/bridge"
 import { getMactfsBridge } from "~/lib/electron/bridge"
@@ -65,14 +75,21 @@ export default function Home() {
   })
   const [form, setForm] = useState<ConnectionForm>(EMPTY_CONNECTION_FORM)
   const [connecting, setConnecting] = useState(false)
+  const [collectionsLoading, setCollectionsLoading] = useState(false)
+  const [workspaceLoading, setWorkspaceLoading] = useState(false)
   const [connected, setConnected] = useState(false)
   const [connectResult, setConnectResult] = useState<ConnectData>()
+  const [collections, setCollections] = useState<TfsCollectionInfo[]>([])
   const [preferredCollection, setPreferredCollection] = useState("")
   const [selectedCollection, setSelectedCollection] = useState("")
+  const [workspace, setWorkspace] = useState<TfsWorkspaceInfo>()
   const [selectedServerPath, setSelectedServerPath] = useState("")
   const [pendingRefreshKey, setPendingRefreshKey] = useState(0)
-  const [workspaceActionKey, setWorkspaceActionKey] = useState("")
+  const [folderRefreshKey, setFolderRefreshKey] = useState(0)
   const [selectedMappedItem, setSelectedMappedItem] = useState(false)
+  const [fileViewTarget, setFileViewTarget] = useState<TfsPendingChangeInfo>()
+  const [historyTarget, setHistoryTarget] = useState<TfsPendingChangeInfo>()
+  const [diffRequest, setDiffRequest] = useState<DiffPanelRequest>()
   const [operationLogs, setOperationLogs] = useState<ApiRequestLogEntry[]>([])
   const [operationLogsLoading, setOperationLogsLoading] = useState(false)
 
@@ -105,6 +122,7 @@ export default function Home() {
     if (configResult?.success) {
       setForm(toConnectionForm(configResult.data.config))
       setPreferredCollection(configResult.data.config.collection || "")
+      setSelectedCollection(configResult.data.config.collection || "")
     }
 
     setState({
@@ -115,7 +133,24 @@ export default function Home() {
         ? undefined
         : configResult?.errorMessage || configResult?.message,
     })
-    setConnected(Boolean(healthResult?.data.connected))
+    if (healthResult?.data.connected && configResult?.data.config.collection) {
+      setConnected(true)
+      setWorkspace(
+        configResult.data.config.workspace
+          ? ({
+              name: configResult.data.config.workspace,
+              ownerName: "",
+              computer: "",
+              comment: "",
+              created: false,
+              mappings: [],
+            } satisfies TfsWorkspaceInfo)
+          : undefined
+      )
+      setSelectedServerPath("$/")
+    } else {
+      setConnected(false)
+    }
   }
 
   useEffect(() => {
@@ -179,6 +214,67 @@ export default function Home() {
 
     setConnected(true)
     setConnectResult(result.data)
+    await loadCollections()
+  }
+
+  /**
+   * 加载登录后的 Collection 列表，并按上次使用记录默认选中。
+   */
+  async function loadCollections() {
+    setCollectionsLoading(true)
+    const result = await listCollections()
+    setCollectionsLoading(false)
+
+    if (!result.success) {
+      setState((currentState) => ({
+        ...currentState,
+        errorMessage: result.errorMessage || result.message,
+      }))
+      return
+    }
+
+    setCollections(result.data.collections)
+    const preferred =
+      result.data.collections.find(
+        (collection) => collection.name === preferredCollection
+      ) || result.data.collections[0]
+    setSelectedCollection(preferred?.name || "")
+  }
+
+  /**
+   * 固定当前 Collection，并让后端自动使用或创建 Workspace 后进入工作台。
+   */
+  async function enterWorkspace() {
+    if (!selectedCollection) {
+      setState((currentState) => ({
+        ...currentState,
+        errorMessage: "请选择 Collection。",
+      }))
+      return
+    }
+
+    setWorkspaceLoading(true)
+    setState((currentState) => ({
+      ...currentState,
+      errorMessage: undefined,
+    }))
+
+    const result = await ensureWorkspaceContext({
+      collection: selectedCollection,
+    })
+    setWorkspaceLoading(false)
+
+    if (!result.success) {
+      setState((currentState) => ({
+        ...currentState,
+        errorMessage: result.errorMessage || result.message,
+      }))
+      return
+    }
+
+    setWorkspace(result.data.workspace)
+    setPreferredCollection(result.data.collection)
+    setSelectedServerPath("$/")
   }
 
   /**
@@ -189,18 +285,18 @@ export default function Home() {
   }
 
   /**
+   * 触发中间文件列表刷新，供 Checkin 或右侧撤销后更新当前目录状态。
+   */
+  function refreshFolderItems() {
+    setFolderRefreshKey((currentKey) => currentKey + 1)
+  }
+
+  /**
    * 切换主工作区当前路径，并清理上一目录的选中项状态。
    */
   function selectServerPath(path: string) {
     setSelectedMappedItem(false)
     setSelectedServerPath(path)
-  }
-
-  /**
-   * 触发中间工作区文件操作，顶部工具栏和底部操作区复用同一套执行逻辑。
-   */
-  function runWorkspaceAction(action: string) {
-    setWorkspaceActionKey(`${action}:${Date.now()}`)
   }
 
   /**
@@ -259,6 +355,8 @@ export default function Home() {
         serviceLoading={state.loading}
         serverUri={connectResult?.serverUri || form.serverUri}
         username={form.username}
+        collection={selectedCollection}
+        workspace={workspace?.name}
         collectionCount={connectResult?.collectionCount}
         serviceBaseUrl={state.serviceStatus?.baseUrl}
         tokenFile={state.serviceStatus?.tokenFile}
@@ -266,38 +364,102 @@ export default function Home() {
         requestStatus={requestStatus}
         operationLogs={operationLogs}
         operationLogsLoading={operationLogsLoading}
-        workspaceGetLatestEnabled={connected && selectedMappedItem}
-        workspaceHistoryEnabled={connected && Boolean(selectedServerPath)}
         sourceList={
           <ServerTreePanel
-            connected={connected}
-            preferredCollection={preferredCollection}
-            onCollectionSelect={setSelectedCollection}
+            connected={connected && Boolean(workspace)}
+            collection={selectedCollection}
+            selectedPath={selectedServerPath}
             onPathSelect={selectServerPath}
           />
         }
         inspector={
           <PendingChangesPanel
-            connected={connected}
+            connected={connected && Boolean(workspace)}
             collection={selectedCollection}
             refreshKey={pendingRefreshKey}
+            onOpenFile={setFileViewTarget}
+            onOpenDiff={(change) =>
+              setDiffRequest({
+                type: "localLatest",
+                serverPath: change.serverPath,
+                localPath: change.localPath,
+                label: `${change.serverPath} 本地 ↔ Latest`,
+              })
+            }
+            onOpenHistory={setHistoryTarget}
+            onCheckinSuccess={refreshFolderItems}
           />
         }
         onRefreshService={loadServiceStatus}
         onRefreshOperationLogs={loadOperationLogs}
-        onWorkspaceGetLatest={() => runWorkspaceAction("getLatest")}
-        onWorkspaceHistory={() => runWorkspaceAction("history")}
       >
-        {connected ? (
+        {connected && workspace ? (
           <FolderItemsPanel
             connected={connected}
             collection={selectedCollection}
             serverPath={selectedServerPath}
-            actionKey={workspaceActionKey}
+            refreshKey={folderRefreshKey}
             onPendingChangesRefresh={refreshPendingChanges}
             onPathEnter={selectServerPath}
             onSelectedMappedItemChange={setSelectedMappedItem}
           />
+        ) : connected ? (
+          <div className="mx-auto grid w-full max-w-2xl gap-5 p-5">
+            <div className="min-w-0">
+              <h1 className="text-base font-medium">选择 Collection</h1>
+              <p className="mt-1 text-muted-foreground">
+                Collection 确认后，后端会自动使用或创建默认 Workspace。
+              </p>
+            </div>
+
+            <div className="grid gap-3">
+              {collectionsLoading ? (
+                <div className="flex items-center gap-2 rounded-[6px] border bg-muted/20 px-3 py-2 text-muted-foreground">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  正在加载 Collection
+                </div>
+              ) : (
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Collection
+                  </span>
+                  <select
+                    className="h-8 rounded-[6px] border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                    value={selectedCollection}
+                    required
+                    onChange={(event) =>
+                      setSelectedCollection(event.target.value)
+                    }
+                  >
+                    {collections.map((collection) => (
+                      <option
+                        key={collection.id || collection.name}
+                        value={collection.name}
+                      >
+                        {collection.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              {state.errorMessage && (
+                <div className="rounded-[6px] border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive">
+                  {state.errorMessage}
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <Button
+                  disabled={!selectedCollection || workspaceLoading}
+                  onClick={enterWorkspace}
+                >
+                  {workspaceLoading && <Loader2 className="animate-spin" />}
+                  进入工作台
+                </Button>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="mx-auto grid w-full max-w-2xl gap-5 p-5">
             <div className="min-w-0">
@@ -402,6 +564,54 @@ export default function Home() {
             </form>
           </div>
         )}
+
+        <SimpleDialog
+          open={Boolean(fileViewTarget)}
+          title="File Viewer"
+          description={fileViewTarget?.serverPath}
+          onClose={() => setFileViewTarget(undefined)}
+        >
+          {fileViewTarget && (
+            <FileViewerDialog
+              open={Boolean(fileViewTarget)}
+              serverPath={fileViewTarget.serverPath}
+              localPath={fileViewTarget.localPath}
+              preferLocal
+              onClose={() => setFileViewTarget(undefined)}
+            />
+          )}
+        </SimpleDialog>
+
+        <SimpleDialog
+          open={Boolean(historyTarget)}
+          title="History"
+          description={historyTarget?.serverPath}
+          onClose={() => setHistoryTarget(undefined)}
+        >
+          {historyTarget && (
+            <HistoryPanel
+              path={historyTarget.serverPath}
+              folder={historyTarget.folder}
+              label={historyTarget.serverPath}
+              onOpenDiff={setDiffRequest}
+              onClose={() => setHistoryTarget(undefined)}
+            />
+          )}
+        </SimpleDialog>
+
+        <SimpleDialog
+          open={Boolean(diffRequest)}
+          title="Diff"
+          description={diffRequest?.label}
+          onClose={() => setDiffRequest(undefined)}
+        >
+          {diffRequest && (
+            <DiffPanel
+              request={diffRequest}
+              onClose={() => setDiffRequest(undefined)}
+            />
+          )}
+        </SimpleDialog>
       </AppShell>
     </div>
   )

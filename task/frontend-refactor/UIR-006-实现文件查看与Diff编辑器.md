@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -73,9 +73,22 @@ pnpm typecheck
 
 ## 完成记录
 
-待完成后填写：
-
 - 实际修改文件：
+  - `mactfs/src/main/java/com/mydev/mactfs/core/MacTfsCoreService.java`
+  - `mactfs/src/main/java/com/mydev/mactfs/server/MacTfsServer.java`
+  - `mactfsui/app/components/explorer/file-viewer-dialog.tsx`
+  - `mactfsui/app/components/explorer/diff-panel.tsx`
+  - `mactfsui/app/lib/api/endpoints.ts`
+  - `mactfsui/app/lib/api/types.ts`
 - 实际实现内容：
+  - 新增文件只读查看弹窗，支持本地映射文件和服务器 latest 文件。
+  - 文件查看展示来源、大小、编码、搜索、行号和滚动区域。
+  - 后端文件内容接口返回大小、二进制、可渲染、编码和内容。
+  - 超过 5MB 或二进制文件不返回正文渲染。
+  - 本地文件读取和本地 latest diff 增加 Mapping 目录边界校验。
+  - Diff 面板改为弹窗内左右分栏，支持搜索、行号和差异高亮。
 - 测试结果：
+  - 已执行 `pnpm typecheck`，通过。
+  - 已执行 `cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs && ../tfsIntegration/gradlew test`，通过。
 - 遗留问题：
+  - 未引入 Monaco / CodeMirror；当前实现沿用项目轻量文本 diff，满足只读查看、搜索、行号和高亮。

@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -71,9 +71,18 @@ pnpm typecheck
 
 ## 完成记录
 
-待完成后填写：
-
 - 实际修改文件：
+  - `mactfsui/app/components/explorer/folder-items-panel.tsx`
+  - `mactfsui/app/components/explorer/mapping-dialog.tsx`
+  - `mactfsui/app/components/explorer/file-viewer-dialog.tsx`
+  - `mactfsui/app/components/explorer/folder-compare-dialog.tsx`
+  - `mactfsui/app/components/explorer/conflict-dialog.tsx`
 - 实际实现内容：
+  - 重写 `FolderItemsPanel` 为当前目录 items、mappings、pending 状态展示和对象菜单编排。
+  - 移除原内嵌 Mapping 表单、目录对比大块 JSX、选中差异操作区。
+  - History、Diff、Mapping、目录对比、文件查看、冲突处理改由弹窗承载。
+  - 动作编排保留在 `FolderItemsPanel` 和 `home.tsx`，未引入状态库。
 - 测试结果：
+  - 已执行 `pnpm typecheck`，通过。
 - 遗留问题：
+  - 后续可再把菜单动作类型抽成独立 `lib/tfs` 纯类型，但本次按最小改动保留在业务组件内。

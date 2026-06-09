@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -71,9 +71,19 @@ pnpm typecheck
 
 ## 完成记录
 
-待完成后填写：
-
 - 实际修改文件：
+  - `mactfsui/app/routes/home.tsx`
+  - `mactfsui/app/components/explorer/server-tree-panel.tsx`
+  - `mactfsui/app/components/app/app-shell.tsx`
+  - `mactfsui/app/lib/api/endpoints.ts`
+  - `mactfsui/app/lib/api/types.ts`
 - 实际实现内容：
+  - 登录连接成功后加载 Collection 列表，并按上次配置默认选中。
+  - 用户确认 Collection 后调用 `/api/workspace/context`，由后端自动使用或创建 Workspace。
+  - 工作台顶部展示固定 Collection 和 Workspace。
+  - `ServerTreePanel` 移除 Collection 列表与切换逻辑，只接收固定 Collection。
+  - 前端未提供 Workspace 手动选择控件。
 - 测试结果：
+  - 已执行 `cd /Users/fenghp/Desktop/DEV/project/mydev/mactfsui && pnpm typecheck`，通过。
 - 遗留问题：
+  - 未连接真实 TFS 验证上次 Collection 默认选中和 Workspace 创建结果，后续真实环境验收覆盖。

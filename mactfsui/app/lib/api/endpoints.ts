@@ -4,6 +4,7 @@ import type {
   AppConfig,
   AddMappingData,
   AddMappingRequest,
+  ApplyConflictChoiceRequest,
   CheckinData,
   CheckinRequest,
   ChangesetFilesData,
@@ -16,6 +17,8 @@ import type {
   ConnectData,
   DiffLocalLatestRequest,
   DiffRevisionsRequest,
+  FileContentData,
+  FileContentRequest,
   GetLatestData,
   GetLatestRequest,
   HistoryData,
@@ -26,6 +29,8 @@ import type {
   PendingChangesRequest,
   ServerTreeData,
   TextDiffData,
+  WorkspaceContextData,
+  WorkspaceContextRequest,
 } from "./types"
 
 /**
@@ -50,6 +55,16 @@ export function connectSession(config: AppConfig) {
  */
 export function listCollections() {
   return apiRequest<CollectionsData>("/api/collections")
+}
+
+/**
+ * 固定当前 Collection 并自动使用或创建本机默认 Workspace。
+ */
+export function ensureWorkspaceContext(request: WorkspaceContextRequest) {
+  return apiRequest<WorkspaceContextData>("/api/workspace/context", {
+    method: "POST",
+    body: request,
+  })
 }
 
 /**
@@ -142,6 +157,16 @@ export function getLatest(request: GetLatestRequest) {
 }
 
 /**
+ * 读取映射目录内本地文件或未映射文件的服务器 latest 内容。
+ */
+export function getFileContent(request: FileContentRequest) {
+  return apiRequest<FileContentData>("/api/files/content", {
+    method: "POST",
+    body: request,
+  })
+}
+
+/**
  * 对已映射且本地存在的文件或目录执行 checkout。
  */
 export function checkoutFiles(request: FileOperationRequest) {
@@ -176,6 +201,16 @@ export function deleteFiles(request: FileOperationRequest) {
  */
 export function undoFiles(request: FileOperationRequest) {
   return apiRequest<FileOperationData>("/api/files/undo", {
+    method: "POST",
+    body: request,
+  })
+}
+
+/**
+ * 应用 Get Latest / Checkout 冲突弹窗中的单文件选择。
+ */
+export function applyConflictChoice(request: ApplyConflictChoiceRequest) {
+  return apiRequest<FileOperationData>("/api/conflicts/apply", {
     method: "POST",
     body: request,
   })

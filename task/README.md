@@ -26,10 +26,10 @@ blocked
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
 | Frontend | 13 | 13 | 100% |
-| Frontend Refactor | 0 | 10 | 0% |
+| Frontend Refactor | 10 | 10 | 100% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 37 | 56 | 66% |
+| Overall | 47 | 56 | 84% |
 
 ## 当前阶段
 
@@ -37,7 +37,7 @@ Frontend Refactor
 
 ## 下一步任务
 
-- [UIR-001-补齐后端接口能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-001-补齐后端接口能力.md)
+- [FEATURE-001-连接与目录浏览端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/feature/FEATURE-001-连接与目录浏览端到端验收.md)
 
 ## Core
 
@@ -100,16 +100,16 @@ Frontend Refactor
 
 | 任务 | 状态 | 优先级 |
 |---|---|---|
-| [UIR-001-补齐后端接口能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-001-补齐后端接口能力.md) | todo | P0 |
-| [UIR-002-重构登录Collection与Workspace上下文.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-002-重构登录Collection与Workspace上下文.md) | todo | P0 |
-| [UIR-003-重构工作台布局与同步导航.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-003-重构工作台布局与同步导航.md) | todo | P0 |
-| [UIR-004-实现对象右键菜单.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-004-实现对象右键菜单.md) | todo | P0 |
-| [UIR-005-实现MappingHistoryCompare弹窗.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-005-实现MappingHistoryCompare弹窗.md) | todo | P0 |
-| [UIR-006-实现文件查看与Diff编辑器.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-006-实现文件查看与Diff编辑器.md) | todo | P0 |
-| [UIR-007-实现GetLatestCheckout冲突流程.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-007-实现GetLatestCheckout冲突流程.md) | todo | P0 |
-| [UIR-008-重构PendingChanges与Checkin体验.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-008-重构PendingChanges与Checkin体验.md) | todo | P0 |
-| [UIR-009-拆分FolderItemsPanel与动作编排.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-009-拆分FolderItemsPanel与动作编排.md) | todo | P1 |
-| [UIR-010-前端重构端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-010-前端重构端到端验收.md) | todo | P0 |
+| [UIR-001-补齐后端接口能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-001-补齐后端接口能力.md) | done | P0 |
+| [UIR-002-重构登录Collection与Workspace上下文.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-002-重构登录Collection与Workspace上下文.md) | done | P0 |
+| [UIR-003-重构工作台布局与同步导航.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-003-重构工作台布局与同步导航.md) | done | P0 |
+| [UIR-004-实现对象右键菜单.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-004-实现对象右键菜单.md) | done | P0 |
+| [UIR-005-实现MappingHistoryCompare弹窗.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-005-实现MappingHistoryCompare弹窗.md) | done | P0 |
+| [UIR-006-实现文件查看与Diff编辑器.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-006-实现文件查看与Diff编辑器.md) | done | P0 |
+| [UIR-007-实现GetLatestCheckout冲突流程.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-007-实现GetLatestCheckout冲突流程.md) | done | P0 |
+| [UIR-008-重构PendingChanges与Checkin体验.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-008-重构PendingChanges与Checkin体验.md) | done | P0 |
+| [UIR-009-拆分FolderItemsPanel与动作编排.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-009-拆分FolderItemsPanel与动作编排.md) | done | P1 |
+| [UIR-010-前端重构端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-010-前端重构端到端验收.md) | done | P0 |
 
 ## Feature E2E
 

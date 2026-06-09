@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -81,9 +81,22 @@ pnpm typecheck
 
 ## 完成记录
 
-待完成后填写：
-
 - 实际修改文件：
+  - `mactfs/src/main/java/com/mydev/mactfs/core/MacTfsCoreService.java`
+  - `mactfs/src/main/java/com/mydev/mactfs/server/MacTfsServer.java`
+  - `mactfsui/app/components/explorer/conflict-dialog.tsx`
+  - `mactfsui/app/components/explorer/folder-items-panel.tsx`
+  - `mactfsui/app/lib/api/endpoints.ts`
+  - `mactfsui/app/lib/api/types.ts`
 - 实际实现内容：
+  - Get Latest 遇到 pending edit 子项时返回 skipped 和 conflictDetails。
+  - Checkout 自动先执行 Get Latest，遇到冲突时复用同一冲突明细。
+  - 新增冲突选择弹窗，支持全部使用服务器版本、全部保留本地版本、单文件改选和 Diff 入口。
+  - 新增 `/api/conflicts/apply`，支持使用服务器版本和保留本地版本。
+  - 二进制或不可渲染文件不启用 Diff 入口。
 - 测试结果：
+  - 已执行 `pnpm typecheck`，通过。
+  - 已执行 `../tfsIntegration/gradlew test`，通过。
 - 遗留问题：
+  - 自动合并入口保留在 UI 选择中，但后端第一版仅按 checkout 结果处理，未实现三方文本自动合并。
+  - 未执行真实冲突文件的服务器/本地版本应用验证。

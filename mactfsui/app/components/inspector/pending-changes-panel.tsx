@@ -10,6 +10,8 @@ import {
   Upload,
 } from "lucide-react"
 
+import { ContextMenu } from "~/components/app/context-menu"
+import type { ContextMenuItem, ContextMenuState } from "~/components/app/context-menu"
 import { Button } from "~/components/ui/button"
 import { checkin, listPendingChanges, undoFiles } from "~/lib/api/endpoints"
 import type {
@@ -21,6 +23,10 @@ interface PendingChangesPanelProps {
   connected: boolean
   collection: string
   refreshKey: number
+  onOpenFile?(change: TfsPendingChangeInfo): void
+  onOpenDiff?(change: TfsPendingChangeInfo): void
+  onOpenHistory?(change: TfsPendingChangeInfo): void
+  onCheckinSuccess?(): void
 }
 
 const PENDING_STATUS_LABELS: Record<PendingChangeStatus, string> = {
@@ -46,6 +52,10 @@ export function PendingChangesPanel({
   connected,
   collection,
   refreshKey,
+  onOpenFile,
+  onOpenDiff,
+  onOpenHistory,
+  onCheckinSuccess,
 }: PendingChangesPanelProps) {
   const [pendingChanges, setPendingChanges] = useState<
     TfsPendingChangeInfo[]
@@ -60,6 +70,7 @@ export function PendingChangesPanel({
     "success"
   )
   const [message, setMessage] = useState("")
+  const [menu, setMenu] = useState<ContextMenuState>()
 
   useEffect(() => {
     if (!connected || !collection) {
@@ -218,6 +229,7 @@ export function PendingChangesPanel({
 
     setCheckinComment("")
     await loadPendingChanges()
+    onCheckinSuccess?.()
     setIncludedKeys([])
     setMessageType("success")
     setMessage(
@@ -227,6 +239,7 @@ export function PendingChangesPanel({
 
   return (
     <section className="grid gap-3">
+      <ContextMenu menu={menu} onClose={() => setMenu(undefined)} />
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="font-medium">Pending Changes</div>
@@ -282,6 +295,9 @@ export function PendingChangesPanel({
             disabled={checkinLoading}
             onUndo={undoPendingChange}
             onMove={moveToExcluded}
+            onContextMenu={(event, change) =>
+              openPendingContextMenu(event, change, "included")
+            }
           />
 
           <PendingChangeGroup
@@ -294,6 +310,9 @@ export function PendingChangesPanel({
             disabled={checkinLoading}
             onUndo={undoPendingChange}
             onMove={moveToIncluded}
+            onContextMenu={(event, change) =>
+              openPendingContextMenu(event, change, "excluded")
+            }
           />
 
           <section className="grid gap-2">
@@ -330,6 +349,56 @@ export function PendingChangesPanel({
       )}
     </section>
   )
+
+  /**
+   * 打开 Pending Change 对象右键菜单，pending add 不提供服务器比较入口。
+   */
+  function openPendingContextMenu(
+    event: React.MouseEvent,
+    change: TfsPendingChangeInfo,
+    group: "included" | "excluded"
+  ) {
+    event.preventDefault()
+    const pendingAdd = change.status === "pendingAdd"
+    const items: ContextMenuItem[] = [
+      {
+        key: "include",
+        label: "移到 Included",
+        hidden: group === "included",
+        onSelect: () => moveToIncluded(change),
+      },
+      {
+        key: "exclude",
+        label: "移到 Excluded",
+        hidden: group === "excluded",
+        onSelect: () => moveToExcluded(change),
+      },
+      {
+        key: "view",
+        label: "查看",
+        hidden: change.folder,
+        onSelect: () => onOpenFile?.(change),
+      },
+      {
+        key: "diff",
+        label: "比较本地与服务器 Latest",
+        hidden: change.folder || pendingAdd,
+        onSelect: () => onOpenDiff?.(change),
+      },
+      {
+        key: "history",
+        label: "查看历史",
+        onSelect: () => onOpenHistory?.(change),
+      },
+      {
+        key: "undo",
+        label: "撤销",
+        danger: true,
+        onSelect: () => undoPendingChange(change),
+      },
+    ]
+    setMenu({ x: event.clientX, y: event.clientY, items })
+  }
 }
 
 interface PendingChangeGroupProps {
@@ -342,6 +411,7 @@ interface PendingChangeGroupProps {
   disabled: boolean
   onUndo(change: TfsPendingChangeInfo): void
   onMove(change: TfsPendingChangeInfo): void
+  onContextMenu(event: React.MouseEvent, change: TfsPendingChangeInfo): void
 }
 
 /**
@@ -357,6 +427,7 @@ function PendingChangeGroup({
   disabled,
   onUndo,
   onMove,
+  onContextMenu,
 }: PendingChangeGroupProps) {
   return (
     <section className="grid gap-2">
@@ -377,6 +448,7 @@ function PendingChangeGroup({
             <div
               key={change.serverPath}
               className="grid gap-1 rounded-[6px] border bg-muted/20 p-2 text-xs"
+              onContextMenu={(event) => onContextMenu(event, change)}
             >
               <div className="flex min-w-0 items-start justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-1.5">

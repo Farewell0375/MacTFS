@@ -9,7 +9,9 @@ import com.mydev.mactfs.core.MacTfsCoreService.ConnectionSummary;
 import com.mydev.mactfs.core.MacTfsCoreService.CoreOperationResult;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsCheckinResult;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsCollectionInfo;
+import com.mydev.mactfs.core.MacTfsCoreService.TfsConflictInfo;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsConnectionConfig;
+import com.mydev.mactfs.core.MacTfsCoreService.TfsFileContent;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsFileOperationResult;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsFolderDiffItem;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsGetLatestResult;
@@ -61,6 +63,7 @@ public class MacTfsServer {
     private static final long TIMEOUT_DIFF_MS = TimeUnit.SECONDS.toMillis(60);
     private static final long TIMEOUT_LONG_WRITE_MS = TimeUnit.SECONDS.toMillis(300);
     private static final long TIMEOUT_DEFAULT_MS = TimeUnit.SECONDS.toMillis(120);
+    private static final String NATIVE_ARCH_ERROR = "当前 TFS SDK macOS native 库仅支持 x86_64。请使用项目内置 zulu8.94.0.17-ca-jdk8.0.492-macosx_x64 启动本地 API 服务。";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final MacTfsCoreService coreService = new MacTfsCoreService();
@@ -173,6 +176,9 @@ public class MacTfsServer {
                 data.put("tokenFile", tokenStore.getTokenFile().getAbsolutePath());
                 data.put("configFile", configStore.getConfigFile().getAbsolutePath());
                 data.put("connected", Boolean.valueOf(sessionManager.isConnected()));
+                data.put("javaArch", System.getProperty("os.arch"));
+                data.put("javaHome", System.getProperty("java.home"));
+                data.put("nativeCompatible", Boolean.valueOf(isNativeCompatible()));
                 return ApiResult.success("ok", data);
             }
         }));
@@ -201,6 +207,7 @@ public class MacTfsServer {
         Spark.post("/api/session/connect", (request, response) -> handle(request, response, "connect", TIMEOUT_CONNECT_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {
+                requireNativeCompatible();
                 AppConfig config = requestConfig(readBody(request));
                 CoreOperationResult<ConnectionSummary> result = coreService.testConnection(toTfsConfig(config));
                 if (result.isSuccess()) {
@@ -219,6 +226,7 @@ public class MacTfsServer {
         Spark.get("/api/collections", (request, response) -> handle(request, response, "listCollections", TIMEOUT_DIRECTORY_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {
+                requireNativeCompatible();
                 AppConfig config = requestConfig(new LinkedHashMap<String, Object>());
                 CoreOperationResult<List<TfsCollectionInfo>> result = coreService.listCollections(toTfsConfig(config));
                 Map<String, Object> data = new LinkedHashMap<String, Object>();
@@ -276,6 +284,28 @@ public class MacTfsServer {
                 }
                 Map<String, Object> data = new LinkedHashMap<String, Object>();
                 data.put("workspace", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
+        Spark.post("/api/workspace/context", (request, response) -> handle(request, response, "workspaceContext", TIMEOUT_DIRECTORY_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                String collection = require(configValue(body, "collection", config.collection), "collection");
+                CoreOperationResult<TfsWorkspaceInfo> result = coreService.ensureWorkspace(toTfsConfig(config), collection, stringValue(body, "workspace"), "mactfs default workspace");
+                if (result.isSuccess() && result.getData() != null) {
+                    config.collection = collection;
+                    config.workspace = result.getData().getName();
+                    config.mappings = mappingConfigs(result.getData().getMappings());
+                    configStore.save(config);
+                    sessionManager.setConfig(config);
+                }
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("collection", collection);
+                data.put("workspace", result.getData());
+                data.put("mappings", result.getData() == null || result.getData().getMappings() == null ? Collections.emptyList() : result.getData().getMappings());
                 return fromCore(result, data);
             }
         }));
@@ -356,6 +386,27 @@ public class MacTfsServer {
             }
         }));
 
+        Spark.post("/api/files/content", (request, response) -> handle(request, response, "fileContent", TIMEOUT_DIFF_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                String serverPath = require(stringValue(body, "serverPath"), "serverPath");
+                String localPath = stringValue(body, "localPath");
+                boolean preferLocal = booleanValue(body, "preferLocal", true);
+                CoreOperationResult<TfsFileContent> result;
+                if (preferLocal && !isBlank(localPath)) {
+                    validateMappedLocalPath(config, serverPath, localPath);
+                    result = coreService.getLocalFileContent(serverPath, localPath);
+                } else {
+                    result = coreService.getFileContent(toTfsConfig(config), require(config.collection, "collection"), serverPath, null);
+                }
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("file", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
         Spark.post("/api/files/checkout", (request, response) -> handle(request, response, "checkout", TIMEOUT_DEFAULT_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {
@@ -381,6 +432,13 @@ public class MacTfsServer {
             @Override
             public ApiResult call(Request request) throws Exception {
                 return fileOperation(request, "undo");
+            }
+        }));
+
+        Spark.post("/api/conflicts/apply", (request, response) -> handle(request, response, "applyConflictChoice", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                return applyConflictChoice(request);
             }
         }));
 
@@ -448,7 +506,10 @@ public class MacTfsServer {
             public ApiResult call(Request request) throws Exception {
                 Map<String, Object> body = readBody(request);
                 AppConfig config = requestConfig(body);
-                CoreOperationResult<TfsTextDiff> result = coreService.diffLocalLatest(toTfsConfig(config), require(config.collection, "collection"), require(stringValue(body, "serverPath"), "serverPath"), require(stringValue(body, "localPath"), "localPath"));
+                String serverPath = require(stringValue(body, "serverPath"), "serverPath");
+                String localPath = require(stringValue(body, "localPath"), "localPath");
+                validateMappedLocalPath(config, serverPath, localPath);
+                CoreOperationResult<TfsTextDiff> result = coreService.diffLocalLatest(toTfsConfig(config), require(config.collection, "collection"), serverPath, localPath);
                 Map<String, Object> data = new LinkedHashMap<String, Object>();
                 data.put("diff", result.getData());
                 return fromCore(result, data);
@@ -487,6 +548,7 @@ public class MacTfsServer {
      * 浏览服务端目录并补齐 UI 需要的路径和类型字段。
      */
     private ApiResult browseServerItems(Request request) throws Exception {
+        requireNativeCompatible();
         AppConfig config = requestConfig(new LinkedHashMap<String, Object>());
         String path = firstPresent(request.queryParams("path"), "$/");
         String collection = firstPresent(request.queryParams("collection"), config.collection);
@@ -501,6 +563,7 @@ public class MacTfsServer {
      * 分发 checkout、add、delete、undo 四类文件操作，保持请求结构一致。
      */
     private ApiResult fileOperation(Request request, String operation) throws Exception {
+        requireNativeCompatible();
         Map<String, Object> body = readBody(request);
         AppConfig config = requestConfig(body);
         List<String> paths = requestPaths(body);
@@ -521,6 +584,98 @@ public class MacTfsServer {
     }
 
     /**
+     * 应用 Get Latest / Checkout 冲突选择，服务器版本走同步，本地版本或自动合并结果走 checkout。
+     */
+    private ApiResult applyConflictChoice(Request request) throws Exception {
+        requireNativeCompatible();
+        Map<String, Object> body = readBody(request);
+        AppConfig config = requestConfig(body);
+        String serverPath = require(stringValue(body, "serverPath"), "serverPath");
+        String choice = firstPresent(stringValue(body, "choice"), "keepLocal");
+        CoreOperationResult<?> result;
+        Map<String, Object> data = new LinkedHashMap<String, Object>();
+        if ("useServer".equals(choice)) {
+            result = coreService.getLatest(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), serverPath, false);
+            data.put("result", result.getData());
+        } else {
+            result = coreService.checkout(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), Arrays.asList(serverPath), false);
+            data.put("result", result.getData());
+        }
+        data.put("choice", choice);
+        return fromCore(result, data);
+    }
+
+    /**
+     * 校验本地文件路径必须落在对应 Mapping 目录内，避免 UI 读取任意本机文件。
+     */
+    private void validateMappedLocalPath(AppConfig config, String serverPath, String localPath) {
+        MappingConfig mapping = findMappingConfig(config, serverPath);
+        if (mapping == null) {
+            throw new IllegalArgumentException("Server path is not mapped: " + serverPath);
+        }
+        File mappingRoot = new File(mapping.localPath).getAbsoluteFile();
+        File target = new File(localPath).getAbsoluteFile();
+        if (!target.getPath().equals(mappingRoot.getPath()) && !target.getPath().startsWith(mappingRoot.getPath() + File.separator)) {
+            throw new IllegalArgumentException("Local path is outside mapping directory");
+        }
+    }
+
+    /**
+     * 查找覆盖当前服务端路径的最长 Mapping，支持子目录和文件读取。
+     */
+    private MappingConfig findMappingConfig(AppConfig config, String serverPath) {
+        MappingConfig result = null;
+        if (config.mappings == null) {
+            return null;
+        }
+        for (MappingConfig mapping : config.mappings) {
+            if (mapping.serverPath != null && isServerChildPath(serverPath, mapping.serverPath)) {
+                if (result == null || mapping.serverPath.length() > result.serverPath.length()) {
+                    result = mapping;
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 判断服务端路径是否位于 Mapping 服务端根路径下。
+     */
+    private boolean isServerChildPath(String serverPath, String mappingPath) {
+        String item = serverPath == null ? "" : serverPath.toLowerCase();
+        String root = mappingPath == null ? "" : mappingPath.toLowerCase();
+        return item.equals(root) || item.startsWith(root + "/");
+    }
+
+    /**
+     * 在 Apple Silicon + arm64 JVM 下提前拒绝 TFS SDK 调用，避免 JNI 报 native 方法签名错误。
+     */
+    private void requireNativeCompatible() {
+        if (!isNativeCompatible()) {
+            throw new IllegalStateException(NATIVE_ARCH_ERROR);
+        }
+    }
+
+    /**
+     * 判断当前 JVM 架构是否能加载随项目分发的 TFS macOS x86_64 native 库。
+     */
+    private boolean isNativeCompatible() {
+        String osName = System.getProperty("os.name", "").toLowerCase();
+        String arch = System.getProperty("os.arch", "").toLowerCase();
+        return !osName.contains("mac") || arch.contains("x86_64") || arch.contains("amd64");
+    }
+
+    /**
+     * 只对会进入 TFS SDK 的业务接口做 native 架构校验，health/config/logs 保持可用。
+     */
+    private boolean requiresNative(String operation) {
+        return !("health".equals(operation)
+            || "getConfig".equals(operation)
+            || "saveConfig".equals(operation)
+            || "operationLogs".equals(operation));
+    }
+
+    /**
      * 统一执行 API 调用，集中处理耗时统计、超时、异常和操作日志。
      */
     private String handle(Request request, Response response, String operation, long timeoutMs, ApiCallable callable) throws Exception {
@@ -529,6 +684,9 @@ public class MacTfsServer {
         Future<ApiResult> future = executorService.submit(new Callable<ApiResult>() {
             @Override
             public ApiResult call() throws Exception {
+                if (requiresNative(operation)) {
+                    requireNativeCompatible();
+                }
                 return callable.call(request);
             }
         });

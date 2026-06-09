@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { GitCompareArrows, Loader2, RefreshCw, X } from "lucide-react"
+import { GitCompareArrows, Loader2, RefreshCw, Search, X } from "lucide-react"
 
 import { Button } from "~/components/ui/button"
 import { diffLocalLatest, diffRevisions } from "~/lib/api/endpoints"
@@ -36,6 +36,7 @@ interface DiffRow {
  */
 export function DiffPanel({ request, onClose }: DiffPanelProps) {
   const [diff, setDiff] = useState<TfsTextDiff>()
+  const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
 
@@ -44,6 +45,7 @@ export function DiffPanel({ request, onClose }: DiffPanelProps) {
   }, [request])
 
   const rows = diff ? toDiffRows(diff.lines) : []
+  const lowerSearch = search.trim().toLowerCase()
 
   /**
    * 根据当前请求类型加载文本 diff。
@@ -96,7 +98,7 @@ export function DiffPanel({ request, onClose }: DiffPanelProps) {
   }
 
   return (
-    <div className="border-b bg-background">
+    <div className="flex h-[min(720px,calc(100svh-96px))] min-h-0 flex-col bg-background">
       <div className="flex min-h-9 items-center justify-between gap-3 px-3 py-1.5 text-xs">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 font-medium">
@@ -108,6 +110,15 @@ export function DiffPanel({ request, onClose }: DiffPanelProps) {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          <div className="flex h-7 items-center gap-1 rounded-[6px] border bg-background px-2">
+            <Search className="size-3.5 text-muted-foreground" />
+            <input
+              className="w-36 bg-transparent text-xs outline-none"
+              value={search}
+              placeholder="搜索"
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
           <Button
             size="icon-xs"
             variant="ghost"
@@ -130,7 +141,7 @@ export function DiffPanel({ request, onClose }: DiffPanelProps) {
       )}
 
       {diff && (
-        <div className="border-t">
+        <div className="min-h-0 flex-1 border-t">
           <div className="grid h-8 grid-cols-2 border-b bg-muted/20 px-3 text-xs font-medium text-muted-foreground">
             <div className="flex min-w-0 items-center truncate font-mono">
               {diff.sourceLabel}
@@ -139,7 +150,7 @@ export function DiffPanel({ request, onClose }: DiffPanelProps) {
               {diff.targetLabel}
             </div>
           </div>
-          <div className="max-h-80 overflow-auto font-mono text-xs">
+          <div className="h-[calc(100%-2rem)] overflow-auto font-mono text-xs">
             {rows.length === 0 ? (
               <div className="px-3 py-4 text-muted-foreground">
                 无可展示 diff 内容。
@@ -148,7 +159,14 @@ export function DiffPanel({ request, onClose }: DiffPanelProps) {
               rows.map((row, index) => (
                 <div
                   key={`${index}:${row.kind}`}
-                  className="grid min-h-6 grid-cols-[48px_minmax(0,1fr)_48px_minmax(0,1fr)] border-b"
+                  className={`grid min-h-6 grid-cols-[48px_minmax(0,1fr)_48px_minmax(0,1fr)] border-b ${
+                    lowerSearch &&
+                    `${row.source || ""}\n${row.target || ""}`
+                      .toLowerCase()
+                      .includes(lowerSearch)
+                      ? "bg-amber-50"
+                      : ""
+                  }`}
                 >
                   <div className="bg-muted/20 px-2 py-1 text-right text-muted-foreground">
                     {index + 1}
