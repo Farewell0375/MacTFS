@@ -6,7 +6,7 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "electron": "electron electron/main.cjs",
-    "electron:dev": "concurrently -k \"pnpm dev\" \"wait-on http://localhost:5173 && NODE_ENV=development electron electron/main.cjs\"",
+    "electron:dev": "concurrently -k \"pnpm dev\" \"wait-on tcp:5173 && NODE_ENV=development electron electron/main.cjs\"",
     "start": "pnpm build && pnpm electron",
     "typecheck": "react-router typegen && tsc",
     "format": "prettier --write \"**/*.{ts,tsx}\""

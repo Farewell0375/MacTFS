@@ -49,7 +49,23 @@
 - 底部操作日志
 - Mapping、目录对比、文件操作、历史、Diff、签入
 
-## 阶段 5：Feature E2E
+## 阶段 5：Frontend Refactor
+
+目标：根据前端重构与 UI 功能调整方案，补齐后端接口能力并重构桌面工作台交互。
+
+输出：
+
+- 登录页固定 Collection，上次 Collection 默认选中
+- Workspace 自动使用或创建
+- 左右栏和底部日志收起
+- 左侧树与中间文件列表同步导航
+- 对象右键菜单
+- Mapping、History、目录对比弹窗
+- 文件查看与 Diff 编辑器
+- Get Latest / Checkout 冲突选择弹窗
+- Pending Changes 右键菜单与 Checkin 体验重构
+
+## 阶段 6：Feature E2E
 
 目标：按真实业务链路做端到端验收。
 
@@ -61,7 +77,7 @@
 - Pending Changes 与 Checkin 验收
 - History 与 Diff 验收
 
-## 阶段 6：Release
+## 阶段 7：Release
 
 目标：完成个人可用的 macOS 桌面应用交付。
 
