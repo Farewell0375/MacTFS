@@ -558,11 +558,18 @@ chmod 644 <file>
 
 ## 十三、当前分支现状
 
-当前分支实际前端代码仍处于轻量起步状态：
+`FE-001` 已完成，前端基础设施已就绪：
 
-- `home.tsx` 还是模板级页面
-- `electron/main.cjs` 只有基础开窗
-- preload 还未正式落地
-- 工作台业务组件还未按本规范建立
+- `electron/main.cjs` 已补齐服务检测、按本地开发约定拉起服务、token 读取与目录选择
+- `electron/preload.cjs` 已落地，通过 `contextBridge` 暴露 `window.mactfs` 窄接口
+- `app/lib/electron` 已提供渲染层桥接（含非 Electron / SSR 兜底）
+- `app/lib/api` 已提供统一 API client（自动携带 Bearer token、统一错误处理）
+- `home.tsx` 暂为引导态：检测 / 拉起本地服务并提供重试入口
 
-因此本分支前端开发必须从 `FE-001` 开始，不再参考旧分支“已经做完”的状态来判断当前任务进度。
+仍未建立：
+
+- 连接页与固定 Collection / Workspace 上下文（FE-003）
+- 三栏工作台布局与折叠面板（FE-004）
+- 目录树、中间列表、右键菜单、各业务弹窗（FE-005 起）
+
+因此当前前端开发应从 `FE-002` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。
