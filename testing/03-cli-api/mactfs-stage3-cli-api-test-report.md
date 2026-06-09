@@ -198,6 +198,20 @@ env JAVA_HOME=/Users/fenghp/Desktop/DEV/project/mydev/zulu8.94.0.17-ca-jdk8.0.49
 - 改用不依赖旧 Workspace 的 `--action test-connection --reuse-config true --output json` 验证旧入口兼容性，结果通过。
 - 未修改 `~/.mactfs/phase-one.properties`。
 
+修复状态：已修复。
+
+修复时间：2026-06-08
+
+修复内容：
+
+- `LocalConfigStore.load()` 在读取旧 `phase-one.properties` 后，会优先合并本地 API 使用的 `~/.mactfs/config.json`。
+- 旧 `--action ... --reuse-config true` 入口可复用第二阶段 API 配置中的 `serverUri`、认证字段、`collection`、`workspace` 和首条 Mapping，避免继续使用本机历史 Workspace。
+
+修复后验证：
+
+- `cd /Users/fenghp/Desktop/DEV/project/mydev/mactfs && ../tfsIntegration/gradlew build`：通过。
+- 隔离 `user.home` 只放置 `~/.mactfs/config.json` 后，执行旧入口 `--action test-connection --reuse-config true --output json`，返回 `Connection refused`，说明 CLI 已读取 `config.json` 中的 `serverUri`，不再因缺少 `--server-uri` 或旧 Workspace 失败。
+
 ## 八、未覆盖项
 
 - 未通过 CLI API 执行 `add`、`checkout`、`delete`、`undo`、`checkin` 的真实写入链路；这些已在阶段二 API 中覆盖，本轮避免重复写入 TFS。

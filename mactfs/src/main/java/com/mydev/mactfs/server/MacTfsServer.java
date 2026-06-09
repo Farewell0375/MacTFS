@@ -283,7 +283,7 @@ public class MacTfsServer {
         Spark.get("/api/mappings", (request, response) -> handle(request, response, "listMappings", TIMEOUT_DIRECTORY_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {
-                AppConfig config = requestConfig(new LinkedHashMap<String, Object>());
+                AppConfig config = requestConfig(queryConfig(request));
                 CoreOperationResult<List<TfsMappingInfo>> result = coreService.listMappings(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"));
                 if (result.isSuccess()) {
                     config.mappings = mappingConfigs(result.getData());
@@ -387,7 +387,8 @@ public class MacTfsServer {
         Spark.get("/api/pending-changes", (request, response) -> handle(request, response, "pendingChanges", TIMEOUT_DEFAULT_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {
-                AppConfig config = requestConfig(new LinkedHashMap<String, Object>());
+                Map<String, Object> query = queryConfig(request);
+                AppConfig config = requestConfig(query);
                 CoreOperationResult<List<TfsPendingChangeInfo>> result = coreService.listPendingChanges(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), splitPaths(request.queryParams("serverPath")));
                 Map<String, Object> data = new LinkedHashMap<String, Object>();
                 data.put("pendingChanges", result.getData() == null ? Collections.emptyList() : result.getData());
@@ -568,6 +569,26 @@ public class MacTfsServer {
         copyString(body, config, "collection");
         copyString(body, config, "workspace");
         return normalizeConfig(config);
+    }
+
+    /**
+     * 提取 GET 请求中的配置覆盖字段，避免 UI 切换 Collection 时读接口使用旧配置。
+     */
+    private Map<String, Object> queryConfig(Request request) {
+        Map<String, Object> query = new LinkedHashMap<String, Object>();
+        copyQuery(request, query, "collection");
+        copyQuery(request, query, "workspace");
+        return query;
+    }
+
+    /**
+     * 将非空 query 参数复制到请求配置覆盖对象。
+     */
+    private void copyQuery(Request request, Map<String, Object> query, String key) {
+        String value = request.queryParams(key);
+        if (!isBlank(value)) {
+            query.put(key, value);
+        }
     }
 
     /**

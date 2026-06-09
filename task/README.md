@@ -25,18 +25,19 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 0 | 13 | 0% |
+| Frontend | 13 | 13 | 100% |
+| Frontend Refactor | 0 | 10 | 0% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 24 | 46 | 52% |
+| Overall | 37 | 56 | 66% |
 
 ## 当前阶段
 
-Frontend
+Frontend Refactor
 
 ## 下一步任务
 
-- [FE-001-实现Electron启动服务与API客户端.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-001-实现Electron启动服务与API客户端.md)
+- [UIR-001-补齐后端接口能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-001-补齐后端接口能力.md)
 
 ## Core
 
@@ -81,19 +82,34 @@ Frontend
 
 | 任务 | 状态 | 优先级 |
 |---|---|---|
-| [FE-001-实现Electron启动服务与API客户端.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-001-实现Electron启动服务与API客户端.md) | todo | P0 |
-| [FE-002-实现登录配置页.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-002-实现登录配置页.md) | todo | P0 |
-| [FE-003-实现VS风格主布局.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-003-实现VS风格主布局.md) | todo | P0 |
-| [FE-004-实现Collection服务端目录树.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-004-实现Collection服务端目录树.md) | todo | P0 |
-| [FE-005-实现中间目录文件列表.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-005-实现中间目录文件列表.md) | todo | P0 |
-| [FE-006-实现Mapping创建流程.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-006-实现Mapping创建流程.md) | todo | P0 |
-| [FE-007-实现目录对比页面.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-007-实现目录对比页面.md) | todo | P0 |
-| [FE-008-实现右侧挂起更改面板.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-008-实现右侧挂起更改面板.md) | todo | P0 |
-| [FE-009-实现文件操作交互.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-009-实现文件操作交互.md) | todo | P0 |
-| [FE-010-实现签入流程.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-010-实现签入流程.md) | todo | P0 |
-| [FE-011-实现历史记录界面.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-011-实现历史记录界面.md) | todo | P0 |
-| [FE-012-实现文件Diff界面.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-012-实现文件Diff界面.md) | todo | P0 |
-| [FE-013-实现操作日志面板.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-013-实现操作日志面板.md) | todo | P1 |
+| [FE-001-实现Electron启动服务与API客户端.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-001-实现Electron启动服务与API客户端.md) | done | P0 |
+| [FE-002-实现登录配置页.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-002-实现登录配置页.md) | done | P0 |
+| [FE-003-实现VS风格主布局.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-003-实现VS风格主布局.md) | done | P0 |
+| [FE-004-实现Collection服务端目录树.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-004-实现Collection服务端目录树.md) | done | P0 |
+| [FE-005-实现中间目录文件列表.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-005-实现中间目录文件列表.md) | done | P0 |
+| [FE-006-实现Mapping创建流程.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-006-实现Mapping创建流程.md) | done | P0 |
+| [FE-007-实现目录对比页面.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-007-实现目录对比页面.md) | done | P0 |
+| [FE-008-实现右侧挂起更改面板.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-008-实现右侧挂起更改面板.md) | done | P0 |
+| [FE-009-实现文件操作交互.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-009-实现文件操作交互.md) | done | P0 |
+| [FE-010-实现签入流程.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-010-实现签入流程.md) | done | P0 |
+| [FE-011-实现历史记录界面.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-011-实现历史记录界面.md) | done | P0 |
+| [FE-012-实现文件Diff界面.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-012-实现文件Diff界面.md) | done | P0 |
+| [FE-013-实现操作日志面板.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-013-实现操作日志面板.md) | done | P1 |
+
+## Frontend Refactor
+
+| 任务 | 状态 | 优先级 |
+|---|---|---|
+| [UIR-001-补齐后端接口能力.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-001-补齐后端接口能力.md) | todo | P0 |
+| [UIR-002-重构登录Collection与Workspace上下文.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-002-重构登录Collection与Workspace上下文.md) | todo | P0 |
+| [UIR-003-重构工作台布局与同步导航.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-003-重构工作台布局与同步导航.md) | todo | P0 |
+| [UIR-004-实现对象右键菜单.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-004-实现对象右键菜单.md) | todo | P0 |
+| [UIR-005-实现MappingHistoryCompare弹窗.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-005-实现MappingHistoryCompare弹窗.md) | todo | P0 |
+| [UIR-006-实现文件查看与Diff编辑器.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-006-实现文件查看与Diff编辑器.md) | todo | P0 |
+| [UIR-007-实现GetLatestCheckout冲突流程.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-007-实现GetLatestCheckout冲突流程.md) | todo | P0 |
+| [UIR-008-重构PendingChanges与Checkin体验.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-008-重构PendingChanges与Checkin体验.md) | todo | P0 |
+| [UIR-009-拆分FolderItemsPanel与动作编排.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-009-拆分FolderItemsPanel与动作编排.md) | todo | P1 |
+| [UIR-010-前端重构端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend-refactor/UIR-010-前端重构端到端验收.md) | todo | P0 |
 
 ## Feature E2E
 
