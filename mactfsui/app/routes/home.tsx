@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useState } from "react"
+
+import { ConnectView } from "~/components/app/connect-view"
+import { WorkspaceShell } from "~/components/app/workspace-shell"
 import { Button } from "~/components/ui/button"
 import { getServiceStatus, isElectron, startService } from "~/lib/electron"
 import type { ServiceStatus } from "~/lib/electron"
+import type { WorkspaceSession } from "~/lib/tfs/session"
 
-// 引导阶段视图状态：检测中、已就绪、未就绪。
-type BootPhase = "checking" | "ready" | "blocked"
+// 顶层视图状态：检测服务、服务未就绪、连接入口、已进入工作台。
+type AppPhase = "checking" | "blocked" | "connect" | "workspace"
 
 /**
- * 第一版前端入口（FE-001 引导态）：检测并在需要时拉起本地 API 服务，
- * 验证 Electron preload 与统一 API 客户端基础设施可用，业务工作台在后续任务实现。
+ * 第一版前端入口：先确保本地服务就绪，再走连接 / Collection / Workspace 流程，
+ * 进入工作台后持有固定上下文（FE-003）。
  */
 export default function Home() {
-  const [phase, setPhase] = useState<BootPhase>("checking")
+  const [phase, setPhase] = useState<AppPhase>("checking")
   const [status, setStatus] = useState<ServiceStatus | null>(null)
+  const [session, setSession] = useState<WorkspaceSession | null>(null)
 
   /**
    * 检测本地服务，未就绪时在 Electron 环境下尝试自动拉起。
@@ -24,12 +29,36 @@ export default function Home() {
       next = await startService()
     }
     setStatus(next)
-    setPhase(next.running ? "ready" : "blocked")
+    setPhase(next.running ? "connect" : "blocked")
   }, [])
 
   useEffect(() => {
     void bootstrap()
   }, [bootstrap])
+
+  /**
+   * 连接流程完成后固定上下文并进入工作台。
+   */
+  const handleReady = useCallback((next: WorkspaceSession) => {
+    setSession(next)
+    setPhase("workspace")
+  }, [])
+
+  /**
+   * 从工作台返回连接入口，重新走连接流程。
+   */
+  const handleReconnect = useCallback(() => {
+    setSession(null)
+    setPhase("connect")
+  }, [])
+
+  if (phase === "workspace" && session) {
+    return <WorkspaceShell session={session} onReconnect={handleReconnect} />
+  }
+
+  if (phase === "connect") {
+    return <ConnectView onReady={handleReady} />
+  }
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-muted/40 p-6">
@@ -41,24 +70,9 @@ export default function Home() {
           <p className="mt-4 text-sm text-muted-foreground">正在检查本地服务…</p>
         )}
 
-        {phase === "ready" && status?.health && (
-          <div className="mt-4 space-y-1 text-sm">
-            <p className="font-medium text-emerald-600">本地服务已就绪</p>
-            <p className="text-muted-foreground">
-              地址：<span className="font-mono">{status.baseUrl}</span>
-            </p>
-            <p className="text-muted-foreground">
-              连接状态：{status.health.connected ? "已连接 TFS" : "未连接 TFS"}
-            </p>
-            <p className="mt-3 text-muted-foreground">
-              基础设施就绪，连接页与工作台将在后续任务实现。
-            </p>
-          </div>
-        )}
-
         {phase === "blocked" && (
           <div className="mt-4 space-y-3 text-sm">
-            <p className="font-medium text-red-600">本地服务未就绪</p>
+            <p className="font-medium text-destructive">本地服务未就绪</p>
             <p className="text-muted-foreground">
               {status?.error ?? "无法连接本地 API 服务"}
             </p>
