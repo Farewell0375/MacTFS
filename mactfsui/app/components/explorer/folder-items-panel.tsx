@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
-import { FileText, FolderClosed, Loader2 } from "lucide-react"
+import { FileText, FolderClosed, Loader2, RefreshCw } from "lucide-react"
+
+import { Button } from "~/components/ui/button"
 
 import { FileTargetMenu } from "~/components/app/file-target-menu"
 import { Badge } from "~/components/ui/badge"
@@ -42,6 +44,7 @@ export function FolderItemsPanel({
   refreshToken,
   onNavigate,
   onFileAction,
+  onRefresh,
 }: {
   session: WorkspaceSession
   selectedServerPath: string
@@ -49,6 +52,7 @@ export function FolderItemsPanel({
   refreshToken: number
   onNavigate: (serverPath: string) => void
   onFileAction: (target: FileTarget, action: FileActionId) => void
+  onRefresh: () => void
 }) {
   const [items, setItems] = useState<ServerItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -125,6 +129,17 @@ export function FolderItemsPanel({
             "未映射到本地"
           )}
         </span>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="shrink-0"
+          onClick={onRefresh}
+          disabled={loading}
+          aria-label="刷新当前目录"
+          title="刷新当前目录"
+        >
+          <RefreshCw className={cn(loading && "animate-spin")} />
+        </Button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">

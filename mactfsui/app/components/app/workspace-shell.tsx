@@ -111,6 +111,7 @@ export function WorkspaceShell({
             refreshToken={itemsRefreshToken}
             onNavigate={onNavigate}
             onFileAction={actions.handleFileAction}
+            onRefresh={refreshItems}
           />
           {panels.changes && (
             <ChangesPanel
@@ -123,6 +124,7 @@ export function WorkspaceShell({
               onToggleExcluded={pending.toggleExcluded}
               onCheckin={actions.handleCheckin}
               onFileAction={actions.handleFileAction}
+              onRefresh={() => void pending.refresh()}
             />
           )}
         </div>

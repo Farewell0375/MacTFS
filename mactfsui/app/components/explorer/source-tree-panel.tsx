@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { ChevronRight, FolderClosed, FolderOpen, Loader2 } from "lucide-react"
+import { ChevronRight, FolderClosed, FolderOpen, Loader2, RefreshCw } from "lucide-react"
 
 import { FileTargetMenu } from "~/components/app/file-target-menu"
+import { Button } from "~/components/ui/button"
 import { ScrollArea } from "~/components/ui/scroll-area"
 import { api } from "~/lib/api"
 import type { MappingInfo, ServerItem } from "~/lib/api"
@@ -38,6 +39,8 @@ export function SourceTreePanel({
   })
   const [loadingPaths, setLoadingPaths] = useState<Record<string, boolean>>({})
   const [error, setError] = useState<string | null>(null)
+  // 手动刷新令牌：递增时清空缓存并重新加载。
+  const [reloadToken, setReloadToken] = useState(0)
   // 已加载与加载中的路径集合，避免异步流程里读到过期 state。
   const requestedRef = useRef<Set<string>>(new Set())
 
@@ -66,7 +69,7 @@ export function SourceTreePanel({
     [collection],
   )
 
-  // 当前路径变化时（含中间列表双击进入），逐级加载并展开祖先链与自身。
+  // 当前路径变化或手动刷新时，逐级加载并展开祖先链与自身。
   useEffect(() => {
     let active = true
     void (async () => {
@@ -82,7 +85,18 @@ export function SourceTreePanel({
     return () => {
       active = false
     }
-  }, [selectedServerPath, ensureChildren])
+  }, [selectedServerPath, ensureChildren, reloadToken])
+
+  /**
+   * 手动刷新目录树：清空懒加载缓存并从根重新加载，保持当前选中路径的展开链。
+   */
+  const handleRefresh = useCallback(() => {
+    requestedRef.current.clear()
+    setChildrenByPath({})
+    setExpanded({ [SERVER_ROOT_PATH]: true })
+    setError(null)
+    setReloadToken((token) => token + 1)
+  }, [])
 
   /**
    * 切换节点展开 / 收起，首次展开时触发懒加载。
@@ -114,9 +128,19 @@ export function SourceTreePanel({
 
   return (
     <aside className="flex h-full w-[280px] shrink-0 flex-col border-r bg-sidebar">
-      <div className="flex h-9 shrink-0 items-center justify-between border-b px-3">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-b px-3">
         <span className="text-xs font-medium text-muted-foreground">源码目录</span>
-        <span className="max-w-32 truncate text-xs text-muted-foreground">{collection}</span>
+        <span className="ml-auto max-w-28 truncate text-xs text-muted-foreground">{collection}</span>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="shrink-0"
+          onClick={handleRefresh}
+          aria-label="刷新目录树"
+          title="刷新目录树"
+        >
+          <RefreshCw />
+        </Button>
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="p-2">

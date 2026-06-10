@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react"
-import { FileText, FolderClosed, ListChecks, Loader2 } from "lucide-react"
+import { FileText, FolderClosed, ListChecks, Loader2, RefreshCw } from "lucide-react"
 
 import { FileTargetMenu } from "~/components/app/file-target-menu"
 import { Badge } from "~/components/ui/badge"
@@ -26,6 +26,7 @@ export function ChangesPanel({
   onToggleExcluded,
   onCheckin,
   onFileAction,
+  onRefresh,
 }: {
   mappings: MappingInfo[]
   pendingChanges: PendingChange[]
@@ -36,6 +37,7 @@ export function ChangesPanel({
   onToggleExcluded: (serverPath: string) => void
   onCheckin: (paths: string[], comment: string) => Promise<boolean>
   onFileAction: (target: FileTarget, action: FileActionId) => void
+  onRefresh: () => void
 }) {
   const [comment, setComment] = useState("")
 
@@ -65,11 +67,22 @@ export function ChangesPanel({
 
   return (
     <aside className="flex h-full w-[340px] shrink-0 flex-col border-l bg-sidebar">
-      <div className="flex h-9 shrink-0 items-center justify-between border-b px-3">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-b px-3">
         <span className="text-xs font-medium text-muted-foreground">挂起更改</span>
         {pendingChanges.length > 0 && (
-          <span className="text-xs text-muted-foreground">{pendingChanges.length} 项</span>
+          <span className="ml-auto text-xs text-muted-foreground">{pendingChanges.length} 项</span>
         )}
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className={pendingChanges.length > 0 ? "" : "ml-auto"}
+          onClick={onRefresh}
+          disabled={loading}
+          aria-label="刷新挂起更改"
+          title="刷新挂起更改"
+        >
+          <RefreshCw className={cn(loading && "animate-spin")} />
+        </Button>
       </div>
 
       {loading ? (
