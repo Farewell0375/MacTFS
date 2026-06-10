@@ -559,7 +559,7 @@ chmod 644 <file>
 
 ## 十三、当前分支现状
 
-`FE-001` 至 `FE-010` 已完成，前端基础设施、接口契约、连接入口、工作台骨架、目录浏览、对象右键菜单、业务弹窗（Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理）、Get Latest / Checkout 执行链与 Pending / Checkin 体验已就绪：
+`FE-001` 至 `FE-011` 已完成，前端基础设施、接口契约、连接入口、工作台骨架、目录浏览、对象右键菜单、业务弹窗（Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理）、Get Latest / Checkout 执行链、Pending / Checkin 体验与动作编排收口已就绪：
 
 - `electron/main.cjs` 已补齐服务检测、按本地开发约定拉起服务、token 读取与目录选择
 - `electron/preload.cjs` 已落地，通过 `contextBridge` 暴露 `window.mactfs` 窄接口
@@ -583,10 +583,10 @@ chmod 644 <file>
 
 - `app/components/explorer/conflict-dialog.tsx`（逐项 / 批量取舍、冲突 Diff、应用后自动刷新）与 `workspace-shell.tsx` 的 `runGetLatest` / `runCheckout`（签出自动先取最新、冲突自动进弹窗、顶部通知条反馈）已落地
 - 对象动作中 unmap / getLatest / checkout / delete / undo / checkin 均已实际执行并按 9.3 规则刷新
+- 动作编排已收口：`app/hooks/use-pending-changes.ts`（挂起更改共享状态）、`app/hooks/use-file-actions.ts`（弹窗开关 + 动作执行 + 通知），`workspace-shell.tsx` 仅负责组合，业务弹窗统一由 `app/components/app/workspace-dialogs.tsx` 渲染
 
 仍未建立：
 
-- FolderItemsPanel 拆分与动作编排收口（FE-011）
 - 操作日志面板与刷新反馈（FE-012）
 
-因此当前前端开发应从 `FE-011` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。
+因此当前前端开发应从 `FE-012` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。

@@ -31,10 +31,10 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 10 | 13 | 77% |
+| Frontend | 11 | 13 | 85% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 34 | 46 | 74% |
+| Overall | 35 | 46 | 76% |
 
 ## 当前阶段
 
@@ -46,7 +46,7 @@ Frontend Workspace UI
 
 ## 下一步任务
 
-- [FE-011-拆分FolderItemsPanel与收口动作编排.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-011-拆分FolderItemsPanel与收口动作编排.md)
+- [FE-012-实现操作日志面板与刷新反馈.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-012-实现操作日志面板与刷新反馈.md)
 
 ## Core
 
@@ -101,7 +101,7 @@ Frontend Workspace UI
 | [FE-008-实现文件查看与Diff弹窗.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-008-实现文件查看与Diff弹窗.md) | done | P0 |
 | [FE-009-实现GetLatest与Checkout冲突处理.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-009-实现GetLatest与Checkout冲突处理.md) | done | P0 |
 | [FE-010-实现PendingChanges与Checkin体验.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-010-实现PendingChanges与Checkin体验.md) | done | P0 |
-| [FE-011-拆分FolderItemsPanel与收口动作编排.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-011-拆分FolderItemsPanel与收口动作编排.md) | todo | P1 |
+| [FE-011-拆分FolderItemsPanel与收口动作编排.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-011-拆分FolderItemsPanel与收口动作编排.md) | done | P1 |
 | [FE-012-实现操作日志面板与刷新反馈.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-012-实现操作日志面板与刷新反馈.md) | todo | P1 |
 | [FE-013-前端阶段联调验收基线.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-013-前端阶段联调验收基线.md) | todo | P0 |
 

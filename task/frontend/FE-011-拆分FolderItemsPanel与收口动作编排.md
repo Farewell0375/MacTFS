@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -65,4 +65,32 @@ pnpm typecheck
 
 ## 完成记录
 
-待完成后填写。
+### 实际修改文件
+
+- `mactfsui/app/hooks/use-pending-changes.ts`（新增）：挂起更改共享状态收口（列表 / 刷新 / Excluded 维护 / pendingByServerPath）
+- `mactfsui/app/hooks/use-file-actions.ts`（新增）：对象动作编排收口（弹窗状态 `WorkspaceDialogState`、通知 `ActionNotice`、getLatest / checkout / delete / undo / unmap 执行、checkin、Mapping 创建与冲突解决回调）
+- `mactfsui/app/components/app/workspace-dialogs.tsx`（新增）：业务弹窗统一出口，无业务状态
+- `mactfsui/app/components/app/workspace-shell.tsx`（精简 441 → 135 行）：只负责面板显隐、刷新令牌与组件组合
+
+### 实际实现内容
+
+- `FolderItemsPanel` 自 FE-005 起即只承载目录项展示、选择、双击进入与行级菜单触发，本任务核对后无内嵌 Mapping / History / Compare / Diff / 冲突 JSX，无需再拆
+- 动作编排从 WorkspaceShell 上提到轻量 hook（符合 FRONTEND_SPEC 5.5「home.tsx 或轻量 hook」），动作类型与参数结构沿用 `lib/tfs/actions.ts` 的 `FileTarget` / `FileActionId`，无新增重复定义
+- 弹窗开关统一为 `WorkspaceDialogState` 单一状态，渲染收口到 `WorkspaceDialogs`
+- 未引入 Redux / Zustand / TanStack Query，未改写业务规则，无样式改版
+
+### 已执行测试
+
+- `pnpm typecheck`：通过
+- Playwright 回归（mock API）：获取最新通知、未映射目录映射弹窗、历史弹窗、签入成功（changeset 200）全部正常，与重构前行为一致
+
+### 是否满足验收标准
+
+- `FolderItemsPanel` 不再承载大块临时功能区：满足
+- 中间主列表只负责当前目录数据与基础状态：满足
+- 弹窗状态和对象动作编排更清晰：满足（两个 hook + 弹窗出口组件）
+- 不引入新的大型状态管理库：满足
+
+### 遗留问题
+
+- 无
