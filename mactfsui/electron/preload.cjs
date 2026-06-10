@@ -33,4 +33,10 @@ contextBridge.exposeInMainWorld("mactfs", {
   selectDirectory() {
     return ipcRenderer.invoke("mactfs:select-directory")
   },
+  /**
+   * 批量检测本地绝对路径是否存在。
+   */
+  pathsExist(paths) {
+    return ipcRenderer.invoke("mactfs:paths-exist", paths)
+  },
 })

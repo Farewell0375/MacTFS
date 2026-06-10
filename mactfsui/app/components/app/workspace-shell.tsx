@@ -54,7 +54,11 @@ export function WorkspaceShell({
               onNavigate={onNavigate}
             />
           )}
-          <FolderItemsPanel session={session} selectedServerPath={selectedServerPath} />
+          <FolderItemsPanel
+            session={session}
+            selectedServerPath={selectedServerPath}
+            onNavigate={onNavigate}
+          />
           {panels.changes && <ChangesPanel />}
         </div>
 

@@ -213,6 +213,22 @@ async function startService() {
 }
 
 /**
+ * 批量检测本地绝对路径是否存在，供渲染层展示“已映射未下载”状态。
+ */
+function pathsExist(paths) {
+  const result = {}
+  if (!Array.isArray(paths)) {
+    return result
+  }
+  for (const target of paths) {
+    if (typeof target === "string" && target.length > 0) {
+      result[target] = fs.existsSync(target)
+    }
+  }
+  return result
+}
+
+/**
  * 注册渲染进程通过 preload 调用的窄接口，集中暴露 token、服务状态与目录选择能力。
  */
 function registerIpcHandlers() {
@@ -229,6 +245,7 @@ function registerIpcHandlers() {
     }
     return result.filePaths[0]
   })
+  ipcMain.handle("mactfs:paths-exist", (event, paths) => pathsExist(paths))
 }
 
 /**

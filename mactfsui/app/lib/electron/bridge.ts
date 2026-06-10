@@ -75,6 +75,17 @@ export async function selectDirectory(): Promise<string | null> {
 }
 
 /**
+ * 批量检测本地绝对路径是否存在，非 Electron 环境返回 null 表示无法检测。
+ */
+export async function pathsExist(paths: string[]): Promise<Record<string, boolean> | null> {
+  const bridge = getBridge()
+  if (!bridge || paths.length === 0) {
+    return bridge ? {} : null
+  }
+  return bridge.pathsExist(paths)
+}
+
+/**
  * 构造非 Electron 环境下的占位服务状态。
  */
 function unavailableStatus(): ServiceStatus {

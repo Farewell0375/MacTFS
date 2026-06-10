@@ -25,6 +25,7 @@ export interface MactfsBridge {
   getServiceStatus(): Promise<ServiceStatus>
   startService(): Promise<ServiceStatus>
   selectDirectory(): Promise<string | null>
+  pathsExist(paths: string[]): Promise<Record<string, boolean>>
 }
 
 declare global {
