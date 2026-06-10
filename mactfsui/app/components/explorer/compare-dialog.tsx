@@ -106,7 +106,7 @@ export function CompareDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[80svh] flex-col sm:max-w-4xl">
+      <DialogContent className="flex h-[88svh] max-h-[88svh] flex-col sm:max-w-[90vw]">
         <DialogHeader>
           <DialogTitle>目录对比</DialogTitle>
           <DialogDescription className="font-mono text-xs">{serverPath}</DialogDescription>

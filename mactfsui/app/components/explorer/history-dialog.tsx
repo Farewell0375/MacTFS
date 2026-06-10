@@ -163,7 +163,7 @@ export function HistoryDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[80svh] flex-col sm:max-w-3xl">
+      <DialogContent className="flex h-[88svh] max-h-[88svh] flex-col sm:max-w-[88vw]">
         <DialogHeader>
           <DialogTitle>
             {changesetFiles ? `Changeset ${changesetFiles.changeset} 的文件` : "历史记录"}

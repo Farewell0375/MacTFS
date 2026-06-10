@@ -95,7 +95,7 @@ export function FileViewDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[85svh] flex-col sm:max-w-4xl">
+      <DialogContent className="flex h-[90svh] max-h-[90svh] flex-col sm:max-w-[92vw]">
         <DialogHeader>
           <DialogTitle>查看文件</DialogTitle>
           <DialogDescription className="font-mono text-xs">{serverPath}</DialogDescription>
