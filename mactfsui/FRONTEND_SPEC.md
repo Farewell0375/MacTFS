@@ -559,7 +559,7 @@ chmod 644 <file>
 
 ## 十三、当前分支现状
 
-`FE-001` 至 `FE-006` 已完成，前端基础设施、接口契约、连接入口、工作台骨架、目录浏览与对象右键菜单已就绪：
+`FE-001` 至 `FE-007` 已完成，前端基础设施、接口契约、连接入口、工作台骨架、目录浏览、对象右键菜单与 Mapping / History / 目录对比弹窗已就绪：
 
 - `electron/main.cjs` 已补齐服务检测、按本地开发约定拉起服务、token 读取与目录选择
 - `electron/preload.cjs` 已落地，通过 `contextBridge` 暴露 `window.mactfs` 窄接口
@@ -575,14 +575,14 @@ chmod 644 <file>
 - `app/components/inspector/changes-panel.tsx` 已实现挂起更改基础列表与项级右键菜单（Included/Excluded 与 Checkin 留给 FE-010）；`app/components/logs/console-panel.tsx` 为面板骨架
 - `app/lib/tfs` 已沉淀 `session.ts`（固定上下文、`SERVER_ROOT_PATH`）、`path.ts`（路径工具）、`mapping.ts`（本地路径推导）、`status.ts`（状态文案与配色收口）、`actions.ts`（FileTarget / 菜单生成与置灰规则）及 `index.ts` 出口
 - `app/components/app/file-target-menu.tsx` 提供统一右键菜单容器；树、列表、Pending 项共用同一套动作模型
-- `workspace-shell.tsx` 持有 pendingChanges 共享状态并集中分发对象动作，已实现「取消映射」（不跳转浏览位置）
+- `workspace-shell.tsx` 持有 pendingChanges 共享状态并集中分发对象动作，已实现「取消映射」（不跳转浏览位置）与 Mapping / History / 目录对比弹窗编排
+- `app/components/explorer/mapping-dialog.tsx`（父目录选择 + 后端预校验 + 已存在禁止映射 + 可选立即 Get Latest）、`history-dialog.tsx`（文件 / 目录历史、changeset 下钻、版本勾选）、`compare-dialog.tsx`（默认隐藏 upToDate、状态筛选、重新对比、结果项右键菜单）已落地
 - Electron 桥已含 `pathsExist` 本地存在性批量检测，用于「已映射未下载」状态
 - `home.tsx` 已编排 检测服务 → 连接 → 工作台 的视图状态机，统一维护 `selectedServerPath` 与 mappings 更新
 
 仍未建立：
 
-- Mapping / History / 目录对比弹窗（FE-007）
 - 文件查看与 Diff 弹窗（FE-008）
 - Get Latest / Checkout 冲突处理与 Pending / Checkin 完整体验（FE-009、FE-010）
 
-因此当前前端开发应从 `FE-007` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。
+因此当前前端开发应从 `FE-008` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。

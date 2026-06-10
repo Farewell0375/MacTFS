@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { TopBar, type PanelVisibility } from "~/components/app/top-bar"
+import { CompareDialog } from "~/components/explorer/compare-dialog"
 import { FolderItemsPanel } from "~/components/explorer/folder-items-panel"
+import { HistoryDialog } from "~/components/explorer/history-dialog"
+import { MappingDialog } from "~/components/explorer/mapping-dialog"
 import { SourceTreePanel } from "~/components/explorer/source-tree-panel"
 import { ChangesPanel } from "~/components/inspector/changes-panel"
 import { ConsolePanel } from "~/components/logs/console-panel"
@@ -9,6 +12,13 @@ import { TooltipProvider } from "~/components/ui/tooltip"
 import { api } from "~/lib/api"
 import type { MappingInfo, PendingChange } from "~/lib/api"
 import type { FileActionId, FileTarget, WorkspaceSession } from "~/lib/tfs"
+
+// 当前打开的业务弹窗：Mapping / History / 目录对比（FE-007）。
+type DialogState =
+  | { kind: "mapping"; serverPath: string }
+  | { kind: "history"; serverPath: string; folder: boolean }
+  | { kind: "compare"; serverPath: string }
+  | null
 
 /**
  * 三栏工作台外壳：顶部上下文栏 + 左侧目录树 + 中间主工作区 + 右侧 Changes + 底部 Console。
@@ -38,6 +48,7 @@ export function WorkspaceShell({
   // 中间列表刷新令牌：文件操作完成后递增触发重新加载。
   const [itemsRefreshToken, setItemsRefreshToken] = useState(0)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [dialog, setDialog] = useState<DialogState>(null)
 
   /**
    * 切换指定面板的展开 / 收起状态。
@@ -76,7 +87,8 @@ export function WorkspaceShell({
 
   /**
    * 对象右键菜单动作统一分发器。
-   * FE-006 实现取消映射；弹窗类与文件操作类动作由后续任务（FE-007 起）接管。
+   * 取消映射直接执行；map / history / compare 打开对应弹窗；
+   * viewFile / diff（FE-008）、getLatest / checkout（FE-009）、delete / undo（FE-010）由后续任务接管。
    */
   const handleFileAction = useCallback(
     async (target: FileTarget, action: FileActionId) => {
@@ -92,11 +104,31 @@ export function WorkspaceShell({
           onMappingsChanged(result.data?.mappings ?? [])
           break
         }
+        case "map":
+          setDialog({ kind: "mapping", serverPath: target.serverPath })
+          break
+        case "history":
+          setDialog({ kind: "history", serverPath: target.serverPath, folder: target.folder })
+          break
+        case "compare":
+          setDialog({ kind: "compare", serverPath: target.serverPath })
+          break
         default:
-          // map / compare / history / viewFile / diff（FE-007、FE-008），
-          // getLatest / checkout（FE-009），delete / undo（FE-010）后续任务接管。
+          // viewFile / diff（FE-008），getLatest / checkout（FE-009），delete / undo（FE-010）。
           break
       }
+    },
+    [onMappingsChanged],
+  )
+
+  /**
+   * Mapping 创建成功：刷新 mappings 与当前目录列表，保持浏览位置并关闭弹窗。
+   */
+  const handleMappingCreated = useCallback(
+    (mappings: MappingInfo[]) => {
+      onMappingsChanged(mappings)
+      setItemsRefreshToken((token) => token + 1)
+      setDialog(null)
     },
     [onMappingsChanged],
   )
@@ -147,6 +179,29 @@ export function WorkspaceShell({
         </div>
 
         {panels.console && <ConsolePanel />}
+
+        {dialog?.kind === "mapping" && (
+          <MappingDialog
+            serverPath={dialog.serverPath}
+            onClose={() => setDialog(null)}
+            onCreated={handleMappingCreated}
+          />
+        )}
+        {dialog?.kind === "history" && (
+          <HistoryDialog
+            serverPath={dialog.serverPath}
+            folder={dialog.folder}
+            onClose={() => setDialog(null)}
+          />
+        )}
+        {dialog?.kind === "compare" && (
+          <CompareDialog
+            serverPath={dialog.serverPath}
+            mappings={session.mappings}
+            onClose={() => setDialog(null)}
+            onFileAction={handleFileAction}
+          />
+        )}
       </div>
     </TooltipProvider>
   )
