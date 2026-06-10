@@ -31,14 +31,14 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 13 | 13 | 100% |
+| Frontend | 13 | 17 | 76% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 37 | 46 | 80% |
+| Overall | 37 | 50 | 74% |
 
 ## 当前阶段
 
-Feature E2E（前端阶段已完成）
+Frontend 增强（FE-014 ~ FE-017，对照 Visual Studio 源代码管理补齐体验）
 
 ## 前端规范
 
@@ -46,7 +46,7 @@ Feature E2E（前端阶段已完成）
 
 ## 下一步任务
 
-- [FEATURE-001-连接与目录浏览端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/feature/FEATURE-001-连接与目录浏览端到端验收.md)（需要真实 TFS 环境）
+- [FE-014-实现安全获取与强制获取及指定版本.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-014-实现安全获取与强制获取及指定版本.md)
 
 ## Core
 
@@ -104,6 +104,10 @@ Feature E2E（前端阶段已完成）
 | [FE-011-拆分FolderItemsPanel与收口动作编排.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-011-拆分FolderItemsPanel与收口动作编排.md) | done | P1 |
 | [FE-012-实现操作日志面板与刷新反馈.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-012-实现操作日志面板与刷新反馈.md) | done | P1 |
 | [FE-013-前端阶段联调验收基线.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-013-前端阶段联调验收基线.md) | done | P0 |
+| [FE-014-实现安全获取与强制获取及指定版本.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-014-实现安全获取与强制获取及指定版本.md) | todo | P0 |
+| [FE-015-完善历史与对比结果的对象操作.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-015-完善历史与对比结果的对象操作.md) | todo | P0 |
+| [FE-016-优化Diff与历史弹窗体验.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-016-优化Diff与历史弹窗体验.md) | todo | P1 |
+| [FE-017-实现工作台手动刷新.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-017-实现工作台手动刷新.md) | todo | P1 |
 
 ## Feature E2E
 
