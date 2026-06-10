@@ -62,12 +62,20 @@ export default function Home() {
     setSelectedServerPath(serverPath)
   }, [])
 
+  /**
+   * Mapping 创建 / 取消后更新固定上下文中的映射列表，浏览位置保持不变。
+   */
+  const handleMappingsChanged = useCallback((mappings: WorkspaceSession["mappings"]) => {
+    setSession((prev) => (prev ? { ...prev, mappings } : prev))
+  }, [])
+
   if (phase === "workspace" && session) {
     return (
       <WorkspaceShell
         session={session}
         selectedServerPath={selectedServerPath}
         onNavigate={handleNavigate}
+        onMappingsChanged={handleMappingsChanged}
         onReconnect={handleReconnect}
       />
     )

@@ -1,25 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { ChevronRight, FolderClosed, FolderOpen, Loader2 } from "lucide-react"
 
+import { FileTargetMenu } from "~/components/app/file-target-menu"
 import { ScrollArea } from "~/components/ui/scroll-area"
 import { api } from "~/lib/api"
-import type { ServerItem } from "~/lib/api"
-import { getAncestorPaths, normalizeServerPath } from "~/lib/tfs/path"
-import { SERVER_ROOT_PATH } from "~/lib/tfs/session"
+import type { MappingInfo, ServerItem } from "~/lib/api"
+import type { FileActionId, FileTarget } from "~/lib/tfs"
+import {
+  SERVER_ROOT_PATH,
+  getAncestorPaths,
+  makeFileTarget,
+  normalizeServerPath,
+} from "~/lib/tfs"
 import { cn } from "~/lib/utils"
 
 /**
  * 左侧 Source Tree 面板：固定 Collection 下的服务端目录树，懒加载子目录，
- * 与中间列表共享当前路径；中间双击进入目录时自动展开并选中对应节点。
+ * 与中间列表共享当前路径；节点支持与中间列表同规则的右键菜单。
  */
 export function SourceTreePanel({
   collection,
+  mappings,
   selectedServerPath,
   onNavigate,
+  onFileAction,
 }: {
   collection: string
+  mappings: MappingInfo[]
   selectedServerPath: string
   onNavigate: (serverPath: string) => void
+  onFileAction: (target: FileTarget, action: FileActionId) => void
 }) {
   // path -> 子目录列表（仅 folder），undefined 表示尚未加载。
   const [childrenByPath, setChildrenByPath] = useState<Record<string, ServerItem[]>>({})
@@ -117,12 +127,14 @@ export function SourceTreePanel({
             path={SERVER_ROOT_PATH}
             name={SERVER_ROOT_PATH}
             depth={0}
+            mappings={mappings}
             childrenByPath={childrenByPath}
             expanded={expanded}
             loadingPaths={loadingPaths}
             selectedServerPath={normalizeServerPath(selectedServerPath)}
             onToggle={toggleExpand}
             onSelect={handleSelect}
+            onFileAction={onFileAction}
           />
         </div>
       </ScrollArea>
@@ -131,28 +143,32 @@ export function SourceTreePanel({
 }
 
 /**
- * 递归渲染目录树节点：缩进 + 展开箭头 + 文件夹图标 + 名称，行高 28px。
+ * 递归渲染目录树节点：缩进 + 展开箭头 + 文件夹图标 + 名称，整行支持右键菜单。
  */
 function TreeNode({
   path,
   name,
   depth,
+  mappings,
   childrenByPath,
   expanded,
   loadingPaths,
   selectedServerPath,
   onToggle,
   onSelect,
+  onFileAction,
 }: {
   path: string
   name: string
   depth: number
+  mappings: MappingInfo[]
   childrenByPath: Record<string, ServerItem[]>
   expanded: Record<string, boolean>
   loadingPaths: Record<string, boolean>
   selectedServerPath: string
   onToggle: (serverPath: string) => void
   onSelect: (serverPath: string) => void
+  onFileAction: (target: FileTarget, action: FileActionId) => void
 }) {
   const children = childrenByPath[path]
   const isExpanded = expanded[path] === true
@@ -160,52 +176,55 @@ function TreeNode({
   const isSelected = selectedServerPath === path
   // 未加载前默认认为可能有子目录；加载后子目录为空则视为叶子。
   const isLeaf = children != null && children.length === 0
+  const target = makeFileTarget({ source: "tree", folder: true, serverPath: path, mappings })
 
   return (
     <div>
-      <div
-        className={cn(
-          "group flex h-7 items-center rounded-md pr-1",
-          isSelected ? "bg-primary/10" : "hover:bg-muted",
-        )}
-        style={{ paddingLeft: `${depth * 14 + 2}px` }}
-      >
-        <span className="flex size-5 shrink-0 items-center justify-center">
-          {isLoading ? (
-            <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
-          ) : isLeaf ? null : (
-            <button
-              type="button"
-              aria-label={isExpanded ? "收起目录" : "展开目录"}
-              onClick={() => onToggle(path)}
-              className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
-            >
-              <ChevronRight
-                className={cn("size-3.5 transition-transform", isExpanded && "rotate-90")}
-              />
-            </button>
+      <FileTargetMenu target={target} onAction={onFileAction}>
+        <div
+          className={cn(
+            "group flex h-7 items-center rounded-md pr-1",
+            isSelected ? "bg-primary/10" : "hover:bg-muted",
           )}
-        </span>
-        <button
-          type="button"
-          onClick={() => onSelect(path)}
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+          style={{ paddingLeft: `${depth * 14 + 2}px` }}
         >
-          {isExpanded && !isLeaf ? (
-            <FolderOpen className="size-3.5 shrink-0 text-muted-foreground" />
-          ) : (
-            <FolderClosed className="size-3.5 shrink-0 text-muted-foreground" />
-          )}
-          <span
-            className={cn(
-              "truncate text-sm",
-              isSelected && "font-medium text-foreground",
+          <span className="flex size-5 shrink-0 items-center justify-center">
+            {isLoading ? (
+              <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+            ) : isLeaf ? null : (
+              <button
+                type="button"
+                aria-label={isExpanded ? "收起目录" : "展开目录"}
+                onClick={() => onToggle(path)}
+                className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+              >
+                <ChevronRight
+                  className={cn("size-3.5 transition-transform", isExpanded && "rotate-90")}
+                />
+              </button>
             )}
-          >
-            {name}
           </span>
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => onSelect(path)}
+            className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+          >
+            {isExpanded && !isLeaf ? (
+              <FolderOpen className="size-3.5 shrink-0 text-muted-foreground" />
+            ) : (
+              <FolderClosed className="size-3.5 shrink-0 text-muted-foreground" />
+            )}
+            <span
+              className={cn(
+                "truncate text-sm",
+                isSelected && "font-medium text-foreground",
+              )}
+            >
+              {name}
+            </span>
+          </button>
+        </div>
+      </FileTargetMenu>
       {isExpanded &&
         children?.map((child) => (
           <TreeNode
@@ -213,12 +232,14 @@ function TreeNode({
             path={child.serverPath}
             name={child.name}
             depth={depth + 1}
+            mappings={mappings}
             childrenByPath={childrenByPath}
             expanded={expanded}
             loadingPaths={loadingPaths}
             selectedServerPath={selectedServerPath}
             onToggle={onToggle}
             onSelect={onSelect}
+            onFileAction={onFileAction}
           />
         ))}
     </div>

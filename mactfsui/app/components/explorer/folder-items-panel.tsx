@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { FileText, FolderClosed, Loader2 } from "lucide-react"
 
+import { FileTargetMenu } from "~/components/app/file-target-menu"
 import { Badge } from "~/components/ui/badge"
 import {
   Table,
@@ -13,13 +14,14 @@ import {
 import { api } from "~/lib/api"
 import type { ServerItem } from "~/lib/api"
 import { pathsExist } from "~/lib/electron"
-import { resolveLocalPath } from "~/lib/tfs/mapping"
-import type { WorkspaceSession } from "~/lib/tfs/session"
+import type { FileActionId, FileTarget, WorkspaceSession } from "~/lib/tfs"
 import {
+  makeFileTarget,
   resolveItemLocalState,
+  resolveLocalPath,
   statusBadgeClass,
   statusLabel,
-} from "~/lib/tfs/status"
+} from "~/lib/tfs"
 import { cn, formatDateTime } from "~/lib/utils"
 
 // 文件列表行：服务端目录项 + 推导出的本地路径与本地状态。
@@ -31,16 +33,22 @@ interface FolderItemRow {
 
 /**
  * 中间主工作区：展示当前目录下一级文件 / 文件夹列表，
- * 单击选中、双击目录进入，与左侧树共享当前路径状态。
+ * 单击选中、双击目录进入，行级右键菜单与左侧树共用同一套动作模型。
  */
 export function FolderItemsPanel({
   session,
   selectedServerPath,
+  pendingByServerPath,
+  refreshToken,
   onNavigate,
+  onFileAction,
 }: {
   session: WorkspaceSession
   selectedServerPath: string
+  pendingByServerPath: Record<string, string>
+  refreshToken: number
   onNavigate: (serverPath: string) => void
+  onFileAction: (target: FileTarget, action: FileActionId) => void
 }) {
   const [items, setItems] = useState<ServerItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -82,7 +90,7 @@ export function FolderItemsPanel({
     return () => {
       active = false
     }
-  }, [selectedServerPath, session.collection, session.mappings])
+  }, [selectedServerPath, session.collection, session.mappings, refreshToken])
 
   // 组合行数据：推导本地路径与 已映射 / 未映射 / 未下载 状态。
   const rows = useMemo<FolderItemRow[]>(
@@ -151,12 +159,24 @@ export function FolderItemsPanel({
             <TableBody>
               {rows.map((row) => {
                 const selected = row.item.serverPath === selectedItemPath
+                const target = makeFileTarget({
+                  source: "list",
+                  folder: row.item.folder,
+                  serverPath: row.item.serverPath,
+                  mappings: session.mappings,
+                  pendingStatus: pendingByServerPath[row.item.serverPath] ?? null,
+                })
                 return (
-                  <TableRow
+                  <FileTargetMenu
                     key={row.item.serverPath}
+                    target={target}
+                    onAction={onFileAction}
+                  >
+                  <TableRow
                     data-state={selected ? "selected" : undefined}
                     className="cursor-default select-none"
                     onClick={() => setSelectedItemPath(row.item.serverPath)}
+                    onContextMenu={() => setSelectedItemPath(row.item.serverPath)}
                     onDoubleClick={() => {
                       if (row.item.folder) {
                         onNavigate(row.item.serverPath)
@@ -191,6 +211,7 @@ export function FolderItemsPanel({
                       {row.localPath ?? "—"}
                     </TableCell>
                   </TableRow>
+                  </FileTargetMenu>
                 )
               })}
             </TableBody>

@@ -31,10 +31,10 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 5 | 13 | 38% |
+| Frontend | 6 | 13 | 46% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 29 | 46 | 63% |
+| Overall | 30 | 46 | 65% |
 
 ## 当前阶段
 
@@ -46,7 +46,7 @@ Frontend Workspace UI
 
 ## 下一步任务
 
-- [FE-006-实现对象右键菜单与通用动作模型.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-006-实现对象右键菜单与通用动作模型.md)
+- [FE-007-实现MappingHistory与目录对比弹窗.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-007-实现MappingHistory与目录对比弹窗.md)
 
 ## Core
 
@@ -96,7 +96,7 @@ Frontend Workspace UI
 | [FE-003-实现连接页Collection选择与Workspace上下文.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-003-实现连接页Collection选择与Workspace上下文.md) | done | P0 |
 | [FE-004-实现工作台布局折叠面板与同步导航.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-004-实现工作台布局折叠面板与同步导航.md) | done | P0 |
 | [FE-005-实现服务端目录树与当前目录文件列表.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-005-实现服务端目录树与当前目录文件列表.md) | done | P0 |
-| [FE-006-实现对象右键菜单与通用动作模型.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-006-实现对象右键菜单与通用动作模型.md) | todo | P0 |
+| [FE-006-实现对象右键菜单与通用动作模型.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-006-实现对象右键菜单与通用动作模型.md) | done | P0 |
 | [FE-007-实现MappingHistory与目录对比弹窗.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-007-实现MappingHistory与目录对比弹窗.md) | todo | P0 |
 | [FE-008-实现文件查看与Diff弹窗.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-008-实现文件查看与Diff弹窗.md) | todo | P0 |
 | [FE-009-实现GetLatest与Checkout冲突处理.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-009-实现GetLatest与Checkout冲突处理.md) | todo | P0 |
