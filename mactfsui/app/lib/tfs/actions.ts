@@ -29,9 +29,11 @@ export type FileActionId =
   | "map"
   | "unmap"
   | "getLatest"
+  | "forceGetLatest"
   | "checkout"
   | "delete"
   | "undo"
+  | "add"
   | "compare"
   | "history"
   | "viewFile"
@@ -94,6 +96,13 @@ function buildFolderMenu(target: FileTarget): FileMenuItem[][] {
       id: "getLatest",
       label: "获取最新",
       enabled: target.mapped,
+      reason: target.mapped ? undefined : NOT_MAPPED_REASON,
+    },
+    {
+      id: "forceGetLatest",
+      label: "强制获取最新…",
+      enabled: target.mapped,
+      danger: true,
       reason: target.mapped ? undefined : NOT_MAPPED_REASON,
     },
     {
@@ -175,14 +184,18 @@ function buildFileItemMenu(target: FileTarget): FileMenuItem[][] {
 
   const workspaceActions: FileMenuItem[] = [
     {
+      // 安全模式获取：本地改动会产生冲突而不会被覆盖，挂起状态下也允许执行。
       id: "getLatest",
       label: "获取最新",
-      enabled: target.mapped && pending == null,
-      reason: !target.mapped
-        ? NOT_MAPPED_REASON
-        : pending != null
-          ? "存在挂起更改，先撤销或签入"
-          : undefined,
+      enabled: target.mapped,
+      reason: target.mapped ? undefined : NOT_MAPPED_REASON,
+    },
+    {
+      id: "forceGetLatest",
+      label: "强制获取最新…",
+      enabled: target.mapped,
+      danger: true,
+      reason: target.mapped ? undefined : NOT_MAPPED_REASON,
     },
     {
       id: "checkout",

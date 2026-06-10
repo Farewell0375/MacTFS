@@ -143,6 +143,8 @@ export function WorkspaceShell({
           onFileAction={actions.handleFileAction}
           onMappingCreated={actions.handleMappingCreated}
           onConflictsResolved={actions.handleConflictsResolved}
+          onForceGetConfirmed={actions.handleForceGetConfirmed}
+          onGetVersion={actions.runGetVersion}
         />
       </div>
     </TooltipProvider>

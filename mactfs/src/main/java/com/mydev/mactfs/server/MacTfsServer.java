@@ -395,7 +395,23 @@ public class MacTfsServer {
             public ApiResult call(Request request) throws Exception {
                 Map<String, Object> body = readBody(request);
                 AppConfig config = requestConfig(body);
-                CoreOperationResult<TfsGetLatestResult> result = coreService.getLatest(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), stringValue(body, "serverPath"), booleanValue(body, "recursive", true));
+                CoreOperationResult<TfsGetLatestResult> result = coreService.getLatest(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), stringValue(body, "serverPath"), booleanValue(body, "recursive", true), booleanValue(body, "force", false));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("result", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
+        Spark.post("/api/files/get-version", (request, response) -> handle(request, response, "getVersion", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                Number changeset = (Number) body.get("changeset");
+                if (changeset == null) {
+                    throw new IllegalArgumentException("changeset is required");
+                }
+                CoreOperationResult<TfsGetLatestResult> result = coreService.getVersion(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "serverPath"), "serverPath"), changeset.intValue(), booleanValue(body, "recursive", true));
                 Map<String, Object> data = new LinkedHashMap<String, Object>();
                 data.put("result", result.getData());
                 return fromCore(result, data);

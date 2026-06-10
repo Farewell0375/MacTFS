@@ -586,5 +586,6 @@ chmod 644 <file>
 - 动作编排已收口：`app/hooks/use-pending-changes.ts`（挂起更改共享状态）、`app/hooks/use-file-actions.ts`（弹窗开关 + 动作执行 + 通知），`workspace-shell.tsx` 仅负责组合，业务弹窗统一由 `app/components/app/workspace-dialogs.tsx` 渲染
 
 - FE-013 基线检查通过：typecheck、本地 API 调试链路、`pnpm electron:dev` 冒烟均正常；`electron:dev` 已修复代理环境下 wait-on 卡死问题（`NO_PROXY=localhost,127.0.0.1`）
+- FE-014：获取最新默认安全模式（本地改动产生冲突而非被覆盖）；「强制获取最新…」与历史「获取此版本」为带确认弹窗的显式危险动作（`/api/files/get-latest` 支持 `force`，新增 `/api/files/get-version`）
 
 后续工作进入 Feature E2E（FEATURE-001 ~ 005，需要真实 TFS 环境）与 Release 阶段；真实 TFS 相关风险已记录在 FE-013 完成记录中。

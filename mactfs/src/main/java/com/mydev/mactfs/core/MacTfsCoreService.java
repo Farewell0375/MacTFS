@@ -224,28 +224,66 @@ public class MacTfsCoreService {
     }
 
     /**
-     * 对文件、目录或整个 Workspace 执行 Get Latest。
+     * 对文件、目录或整个 Workspace 执行 Get Latest（默认安全模式，不覆盖本地改动）。
      */
     public CoreOperationResult<TfsGetLatestResult> getLatest(final TfsConnectionConfig config,
                                                             final String collectionName,
                                                             final String workspaceName,
                                                             final String serverPath,
                                                             final boolean recursive) {
+        return getLatest(config, collectionName, workspaceName, serverPath, recursive, false);
+    }
+
+    /**
+     * 对文件、目录或整个 Workspace 执行 Get Latest。
+     * force=false 走安全模式（GetOptions.NONE），本地有改动的文件会产生冲突而不会被覆盖；
+     * force=true 等价 Visual Studio 的强制获取（GET_ALL + OVERWRITE），直接覆盖本地。
+     */
+    public CoreOperationResult<TfsGetLatestResult> getLatest(final TfsConnectionConfig config,
+                                                            final String collectionName,
+                                                            final String workspaceName,
+                                                            final String serverPath,
+                                                            final boolean recursive,
+                                                            final boolean force) {
         return execute("getLatest", new CoreCallable<TfsGetLatestResult>() {
             @Override
             public TfsGetLatestResult call(List<String> logs) throws Exception {
                 Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                GetOptions options = force ? GetOptions.GET_ALL.combine(GetOptions.OVERWRITE) : GetOptions.NONE;
                 GetStatus status;
                 String normalizedPath = serverPath == null || serverPath.trim().isEmpty() ? null : normalizeServerPath(serverPath);
                 if (normalizedPath == null) {
-                    status = workspace.get(GetOptions.GET_ALL.combine(GetOptions.OVERWRITE));
-                    logs.add("Get latest workspace: " + workspace.getName());
+                    status = workspace.get(options);
+                    logs.add("Get latest workspace: " + workspace.getName() + (force ? " (force)" : ""));
                 } else {
                     RecursionType recursionType = recursive ? RecursionType.FULL : RecursionType.NONE;
                     GetRequest request = new GetRequest(new ItemSpec(normalizedPath, recursionType), LatestVersionSpec.INSTANCE);
-                    status = workspace.get(new GetRequest[]{request}, GetOptions.GET_ALL.combine(GetOptions.OVERWRITE));
-                    logs.add("Get latest path: " + normalizedPath);
+                    status = workspace.get(new GetRequest[]{request}, options);
+                    logs.add("Get latest path: " + normalizedPath + (force ? " (force)" : ""));
                 }
+                return toGetLatestResult(status);
+            }
+        });
+    }
+
+    /**
+     * 获取指定 changeset 版本（强制覆盖本地），对应 Visual Studio 的 Get Specific Version + Overwrite。
+     */
+    public CoreOperationResult<TfsGetLatestResult> getVersion(final TfsConnectionConfig config,
+                                                              final String collectionName,
+                                                              final String workspaceName,
+                                                              final String serverPath,
+                                                              final int changeset,
+                                                              final boolean recursive) {
+        return execute("getVersion", new CoreCallable<TfsGetLatestResult>() {
+            @Override
+            public TfsGetLatestResult call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                String normalizedPath = normalizeServerPath(serverPath);
+                RecursionType recursionType = recursive ? RecursionType.FULL : RecursionType.NONE;
+                GetRequest request = new GetRequest(new ItemSpec(normalizedPath, recursionType), new ChangesetVersionSpec(changeset));
+                GetStatus status = workspace.get(new GetRequest[]{request}, GetOptions.GET_ALL.combine(GetOptions.OVERWRITE));
+                logs.add("Get version C" + changeset + ": " + normalizedPath);
                 return toGetLatestResult(status);
             }
         });

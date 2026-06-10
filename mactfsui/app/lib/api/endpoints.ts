@@ -118,9 +118,17 @@ export function deleteMapping(body: { serverPath?: string; localPath?: string })
 
 /**
  * 获取指定服务端路径的最新文件。
+ * force=false（默认）为安全模式，本地改动会产生冲突而不被覆盖；force=true 强制覆盖本地。
  */
-export function getLatest(body: { serverPath?: string; recursive?: boolean } = {}) {
+export function getLatest(body: { serverPath?: string; recursive?: boolean; force?: boolean } = {}) {
   return apiClient.post<{ result: GetLatestResult }>("/api/files/get-latest", { body })
+}
+
+/**
+ * 获取指定 changeset 版本并覆盖本地（对应 VS 的 Get Specific Version + Overwrite）。
+ */
+export function getVersion(body: { serverPath: string; changeset: number; recursive?: boolean }) {
+  return apiClient.post<{ result: GetLatestResult }>("/api/files/get-version", { body })
 }
 
 /**

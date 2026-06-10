@@ -5,14 +5,15 @@ import { api } from "~/lib/api"
 import type { MappingInfo } from "~/lib/api"
 import type { FileActionId, FileTarget } from "~/lib/tfs"
 
-// 当前打开的业务弹窗：Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理。
+// 当前打开的业务弹窗：Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理 / 覆盖类确认。
 export type WorkspaceDialogState =
   | { kind: "mapping"; serverPath: string }
   | { kind: "history"; serverPath: string; folder: boolean }
   | { kind: "compare"; serverPath: string }
-  | { kind: "viewFile"; serverPath: string; localPath: string | null }
+  | { kind: "viewFile"; serverPath: string; localPath: string | null; changeset?: number }
   | { kind: "diff"; request: DiffRequest }
   | { kind: "conflicts"; serverPath: string }
+  | { kind: "confirmForceGet"; serverPath: string; folder: boolean }
   | null
 
 // 顶部细条通知：信息（操作摘要）或错误。
@@ -46,12 +47,15 @@ export function useFileActions({
 
   /**
    * 执行 Get Latest（目录递归），返回是否产生冲突；摘要写入顶部通知。
+   * 默认安全模式：本地改动不会被覆盖而是产生冲突并自动进入冲突弹窗；
+   * force=true 为强制覆盖本地（仅经确认弹窗触发）。
    */
   const runGetLatest = useCallback(
-    async (target: FileTarget): Promise<boolean> => {
+    async (target: FileTarget, force = false): Promise<boolean> => {
       const result = await api.getLatest({
         serverPath: target.serverPath,
         recursive: target.folder,
+        force,
       })
       refreshLogs()
       if (!result.ok || !result.data) {
@@ -68,7 +72,7 @@ export function useFileActions({
       }
       setNotice({
         kind: summary.conflicts > 0 ? "error" : "info",
-        text: `获取最新完成：${parts.join("，")}`,
+        text: `${force ? "强制获取" : "获取最新"}完成：${parts.join("，")}`,
       })
       refreshItems()
       if (summary.conflicts > 0) {
@@ -78,6 +82,30 @@ export function useFileActions({
       return false
     },
     [refreshItems, refreshLogs],
+  )
+
+  /**
+   * 获取指定 changeset 版本（覆盖本地），由历史弹窗中的确认操作触发。
+   */
+  const runGetVersion = useCallback(
+    async (serverPath: string, changeset: number, folder: boolean): Promise<boolean> => {
+      setNotice({ kind: "info", text: `正在获取版本 C${changeset}…` })
+      const result = await api.getVersion({ serverPath, changeset, recursive: folder })
+      refreshLogs()
+      if (!result.ok || !result.data) {
+        setNotice({ kind: "error", text: result.errorMessage ?? "获取指定版本失败" })
+        return false
+      }
+      const summary = result.data.result
+      setNotice({
+        kind: "info",
+        text: `已获取版本 C${changeset}：更新 ${summary.updated} 项（本地已被该版本覆盖）`,
+      })
+      refreshItems()
+      await refreshPendingChanges()
+      return true
+    },
+    [refreshItems, refreshLogs, refreshPendingChanges],
   )
 
   /**
@@ -163,6 +191,14 @@ export function useFileActions({
           setNotice({ kind: "info", text: "正在获取最新…" })
           await runGetLatest(target)
           setActionBusy(false)
+          break
+        case "forceGetLatest":
+          // 覆盖类危险操作：先弹确认，确认后才执行。
+          setDialog({
+            kind: "confirmForceGet",
+            serverPath: target.serverPath,
+            folder: target.folder,
+          })
           break
         case "checkout":
           setActionBusy(true)
@@ -260,6 +296,28 @@ export function useFileActions({
     setNotice({ kind: "info", text: "冲突处理完成，已刷新状态" })
   }, [refreshItems, refreshPendingChanges, refreshLogs])
 
+  /**
+   * 强制获取确认后执行：覆盖本地并关闭确认弹窗。
+   */
+  const handleForceGetConfirmed = useCallback(
+    async (serverPath: string, folder: boolean) => {
+      setActionBusy(true)
+      const target: FileTarget = {
+        source: "list",
+        folder,
+        serverPath,
+        localPath: null,
+        mapped: true,
+        mappingRoot: false,
+        pendingStatus: null,
+      }
+      await runGetLatest(target, true)
+      setActionBusy(false)
+      setDialog(null)
+    },
+    [runGetLatest],
+  )
+
   return {
     dialog,
     setDialog,
@@ -270,5 +328,7 @@ export function useFileActions({
     handleCheckin,
     handleMappingCreated,
     handleConflictsResolved,
+    handleForceGetConfirmed,
+    runGetVersion,
   }
 }

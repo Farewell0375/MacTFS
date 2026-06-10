@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, CloudDownload, Loader2 } from "lucide-react"
 
+import { ConfirmDialog } from "~/components/app/confirm-dialog"
 import { Button } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
 import {
@@ -24,19 +25,21 @@ import { formatDateTime } from "~/lib/utils"
 
 /**
  * History 弹窗：展示文件或目录历史（最近记录）。
- * 目录历史可点击 changeset 查看影响文件；文件历史可勾选两个版本，
- * 通过 onDiffRevisions 进入版本对比（FE-008 提供 Diff 弹窗）。
+ * 目录历史可点击 changeset 查看影响文件；文件历史可勾选两个版本进入版本对比；
+ * 每条记录支持「获取此版本…」（确认后用该版本覆盖本地）。
  */
 export function HistoryDialog({
   serverPath,
   folder,
   onClose,
   onDiffRevisions,
+  onGetVersion,
 }: {
   serverPath: string
   folder: boolean
   onClose: () => void
   onDiffRevisions?: (serverPath: string, source: number, target: number) => void
+  onGetVersion?: (serverPath: string, changeset: number, folder: boolean) => Promise<boolean>
 }) {
   const [entries, setEntries] = useState<HistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,6 +52,8 @@ export function HistoryDialog({
   const [filesLoading, setFilesLoading] = useState(false)
   // 文件历史勾选的 changeset（最多两个），用于版本对比。
   const [selected, setSelected] = useState<number[]>([])
+  // 待确认的「获取此版本」目标 changeset。
+  const [confirmVersion, setConfirmVersion] = useState<number | null>(null)
 
   useEffect(() => {
     let active = true
@@ -149,6 +154,7 @@ export function HistoryDialog({
                   <TableHead className="h-8 w-28 text-xs text-muted-foreground">作者</TableHead>
                   <TableHead className="h-8 w-36 text-xs text-muted-foreground">时间</TableHead>
                   <TableHead className="h-8 text-xs text-muted-foreground">注释</TableHead>
+                  {onGetVersion && <TableHead className="h-8 w-12 text-xs text-muted-foreground" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -192,6 +198,18 @@ export function HistoryDialog({
                     <TableCell className="max-w-0 truncate py-1.5 text-xs" title={entry.comment}>
                       {entry.comment || "—"}
                     </TableCell>
+                    {onGetVersion && (
+                      <TableCell className="py-1.5">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          title={`获取此版本（C${entry.changeset}，覆盖本地）`}
+                          onClick={() => setConfirmVersion(entry.changeset)}
+                        >
+                          <CloudDownload />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -220,6 +238,30 @@ export function HistoryDialog({
             </Button>
           )}
         </div>
+
+        {confirmVersion != null && onGetVersion && (
+          <ConfirmDialog
+            title={`获取版本 C${confirmVersion}`}
+            description={
+              <>
+                <p>
+                  将把 <span className="font-mono text-xs">{serverPath}</span>{" "}
+                  的本地内容替换为 changeset {confirmVersion} 的版本。
+                </p>
+                <p className="mt-2 font-medium text-destructive">
+                  本地未签入的修改会被覆盖，且无法恢复。确定继续吗？
+                </p>
+              </>
+            }
+            confirmLabel="获取此版本"
+            danger
+            onConfirm={async () => {
+              await onGetVersion(serverPath, confirmVersion, folder)
+              setConfirmVersion(null)
+            }}
+            onClose={() => setConfirmVersion(null)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   )
