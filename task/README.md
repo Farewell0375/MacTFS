@@ -31,14 +31,14 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 12 | 13 | 92% |
+| Frontend | 13 | 13 | 100% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 36 | 46 | 78% |
+| Overall | 37 | 46 | 80% |
 
 ## 当前阶段
 
-Frontend Workspace UI
+Feature E2E（前端阶段已完成）
 
 ## 前端规范
 
@@ -46,7 +46,7 @@ Frontend Workspace UI
 
 ## 下一步任务
 
-- [FE-013-前端阶段联调验收基线.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-013-前端阶段联调验收基线.md)
+- [FEATURE-001-连接与目录浏览端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/feature/FEATURE-001-连接与目录浏览端到端验收.md)（需要真实 TFS 环境）
 
 ## Core
 
@@ -103,7 +103,7 @@ Frontend Workspace UI
 | [FE-010-实现PendingChanges与Checkin体验.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-010-实现PendingChanges与Checkin体验.md) | done | P0 |
 | [FE-011-拆分FolderItemsPanel与收口动作编排.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-011-拆分FolderItemsPanel与收口动作编排.md) | done | P1 |
 | [FE-012-实现操作日志面板与刷新反馈.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-012-实现操作日志面板与刷新反馈.md) | done | P1 |
-| [FE-013-前端阶段联调验收基线.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-013-前端阶段联调验收基线.md) | todo | P0 |
+| [FE-013-前端阶段联调验收基线.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-013-前端阶段联调验收基线.md) | done | P0 |
 
 ## Feature E2E
 

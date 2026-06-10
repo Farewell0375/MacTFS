@@ -559,7 +559,7 @@ chmod 644 <file>
 
 ## 十三、当前分支现状
 
-`FE-001` 至 `FE-012` 已完成，前端基础设施、接口契约、连接入口、工作台骨架、目录浏览、对象右键菜单、业务弹窗（Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理）、Get Latest / Checkout 执行链、Pending / Checkin 体验、动作编排收口与操作日志面板已就绪：
+前端阶段 `FE-001` 至 `FE-013` 已全部完成：基础设施、接口契约、连接入口、工作台骨架、目录浏览、对象右键菜单、业务弹窗（Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理）、Get Latest / Checkout 执行链、Pending / Checkin 体验、动作编排收口、操作日志面板与联调基线均已就绪：
 
 - `electron/main.cjs` 已补齐服务检测、按本地开发约定拉起服务、token 读取与目录选择
 - `electron/preload.cjs` 已落地，通过 `contextBridge` 暴露 `window.mactfs` 窄接口
@@ -585,8 +585,6 @@ chmod 644 <file>
 - 对象动作中 unmap / getLatest / checkout / delete / undo / checkin 均已实际执行并按 9.3 规则刷新
 - 动作编排已收口：`app/hooks/use-pending-changes.ts`（挂起更改共享状态）、`app/hooks/use-file-actions.ts`（弹窗开关 + 动作执行 + 通知），`workspace-shell.tsx` 仅负责组合，业务弹窗统一由 `app/components/app/workspace-dialogs.tsx` 渲染
 
-仍未完成：
+- FE-013 基线检查通过：typecheck、本地 API 调试链路、`pnpm electron:dev` 冒烟均正常；`electron:dev` 已修复代理环境下 wait-on 卡死问题（`NO_PROXY=localhost,127.0.0.1`）
 
-- 前端阶段联调验收基线（FE-013，需要真实 TFS 环境联调）
-
-因此当前前端开发应从 `FE-013` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。
+后续工作进入 Feature E2E（FEATURE-001 ~ 005，需要真实 TFS 环境）与 Release 阶段；真实 TFS 相关风险已记录在 FE-013 完成记录中。
