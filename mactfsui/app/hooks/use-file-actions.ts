@@ -212,6 +212,25 @@ export function useFileActions({
           await runFileOperation(target, action)
           setActionBusy(false)
           break
+        case "add": {
+          // pend add 需要本地路径（localOnly 项服务端尚不存在）。
+          if (!target.localPath) {
+            return
+          }
+          setActionBusy(true)
+          setNotice({ kind: "info", text: "正在加入版本控制…" })
+          const result = await api.addFiles({ paths: [target.localPath], recursive: target.folder })
+          refreshLogs()
+          setActionBusy(false)
+          if (!result.ok || !result.data) {
+            setNotice({ kind: "error", text: result.errorMessage ?? "加入版本控制失败" })
+            return
+          }
+          setNotice({ kind: "info", text: `已加入版本控制 ${result.data.result.affected} 项` })
+          await refreshPendingChanges()
+          refreshItems()
+          break
+        }
         case "map":
           setDialog({ kind: "mapping", serverPath: target.serverPath })
           break

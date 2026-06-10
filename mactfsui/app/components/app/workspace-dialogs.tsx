@@ -75,6 +75,7 @@ export function WorkspaceDialogs({
         <FileViewDialog
           serverPath={dialog.serverPath}
           localPath={dialog.localPath}
+          changeset={dialog.changeset}
           onClose={onClose}
         />
       )

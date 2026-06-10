@@ -31,34 +31,39 @@ function formatSize(size: number): string {
 }
 
 /**
- * 文件查看弹窗：只读展示本地或服务器 latest 内容，
+ * 文件查看弹窗：只读展示本地、服务器 latest 或指定 changeset 版本内容，
  * 支持来源切换、行号与搜索高亮；二进制 / 超大 / 非映射路径给出明确提示。
  */
 export function FileViewDialog({
   serverPath,
   localPath,
+  changeset,
   onClose,
 }: {
   serverPath: string
   localPath: string | null
+  /** 指定 changeset 时固定展示该版本内容，不提供来源切换。 */
+  changeset?: number
   onClose: () => void
 }) {
-  const [source, setSource] = useState<ViewSource>(localPath ? "local" : "server")
+  const [source, setSource] = useState<ViewSource>(localPath && changeset == null ? "local" : "server")
   const [content, setContent] = useState<FileContent | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
 
-  // 加载所选来源的文件内容；本地内容仅在已映射时可用。
+  // 加载所选来源的文件内容；本地内容仅在已映射时可用；指定版本固定按 changeset 读取。
   useEffect(() => {
     let active = true
     setLoading(true)
     setError(null)
     void (async () => {
       const result =
-        source === "local" && localPath
-          ? await api.getFileContent({ localPath })
-          : await api.getFileContent({ serverPath })
+        changeset != null
+          ? await api.getFileContent({ serverPath, changeset })
+          : source === "local" && localPath
+            ? await api.getFileContent({ localPath })
+            : await api.getFileContent({ serverPath })
       if (!active) {
         return
       }
@@ -73,7 +78,7 @@ export function FileViewDialog({
     return () => {
       active = false
     }
-  }, [source, serverPath, localPath])
+  }, [source, serverPath, localPath, changeset])
 
   const lines = useMemo(
     () => (content && !content.binary && !content.tooLarge ? content.content.split(/\r?\n/) : []),
@@ -97,20 +102,26 @@ export function FileViewDialog({
         </DialogHeader>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <div className="flex items-center rounded-md border p-0.5">
-            <SourceTab
-              label="本地文件"
-              active={source === "local"}
-              disabled={!localPath}
-              disabledReason="未映射到本地"
-              onClick={() => setSource("local")}
-            />
-            <SourceTab
-              label="服务器 latest"
-              active={source === "server"}
-              onClick={() => setSource("server")}
-            />
-          </div>
+          {changeset != null ? (
+            <Badge variant="secondary" className="rounded-md">
+              版本 C{changeset}
+            </Badge>
+          ) : (
+            <div className="flex items-center rounded-md border p-0.5">
+              <SourceTab
+                label="本地文件"
+                active={source === "local"}
+                disabled={!localPath}
+                disabledReason="未映射到本地"
+                onClick={() => setSource("local")}
+              />
+              <SourceTab
+                label="服务器 latest"
+                active={source === "server"}
+                onClick={() => setSource("server")}
+              />
+            </div>
+          )}
           {content && (
             <span className="text-xs text-muted-foreground">
               {formatSize(content.size)}
@@ -165,7 +176,12 @@ export function FileViewDialog({
         </div>
 
         <p className="shrink-0 text-xs text-muted-foreground">
-          只读查看 · 来源：{source === "local" ? `本地 ${localPath ?? ""}` : "服务器 latest"}
+          只读查看 · 来源：
+          {changeset != null
+            ? `changeset ${changeset} 版本`
+            : source === "local"
+              ? `本地 ${localPath ?? ""}`
+              : "服务器 latest"}
         </p>
       </DialogContent>
     </Dialog>

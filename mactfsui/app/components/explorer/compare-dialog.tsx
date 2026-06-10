@@ -178,6 +178,7 @@ export function CompareDialog({
                     serverPath: diff.serverPath,
                     mappings,
                     pendingStatus: diff.status.startsWith("pending") ? diff.status : null,
+                    compareStatus: diff.status,
                   })
                   return (
                     <FileTargetMenu key={diff.serverPath} target={target} onAction={onFileAction}>

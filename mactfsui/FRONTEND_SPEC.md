@@ -587,5 +587,6 @@ chmod 644 <file>
 
 - FE-013 基线检查通过：typecheck、本地 API 调试链路、`pnpm electron:dev` 冒烟均正常；`electron:dev` 已修复代理环境下 wait-on 卡死问题（`NO_PROXY=localhost,127.0.0.1`）
 - FE-014：获取最新默认安全模式（本地改动产生冲突而非被覆盖）；「强制获取最新…」与历史「获取此版本」为带确认弹窗的显式危险动作（`/api/files/get-latest` 支持 `force`，新增 `/api/files/get-version`）
+- FE-015：changeset 文件列表支持右键（查看此版本内容 / 查看该文件历史可返回 / 获取此版本…）；文件查看弹窗支持指定 changeset；目录对比 localOnly 项可「加入版本控制」（pend add）
 
 后续工作进入 Feature E2E（FEATURE-001 ~ 005，需要真实 TFS 环境）与 Release 阶段；真实 TFS 相关风险已记录在 FE-013 完成记录中。

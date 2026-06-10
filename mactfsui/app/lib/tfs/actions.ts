@@ -22,6 +22,8 @@ export interface FileTarget {
   mappingRoot: boolean
   /** 挂起更改状态（pendingEdit / pendingAdd / ...），无挂起为 null。 */
   pendingStatus: string | null
+  /** 目录对比结果状态（localOnly / remoteChanged / ...），非对比来源为 null。 */
+  compareStatus?: string | null
 }
 
 // 全部对象动作。
@@ -58,6 +60,7 @@ export function makeFileTarget(input: {
   serverPath: string
   mappings: MappingInfo[]
   pendingStatus?: string | null
+  compareStatus?: string | null
 }): FileTarget {
   const serverPath = normalizeServerPath(input.serverPath)
   const localPath = resolveLocalPath(input.mappings, serverPath)
@@ -72,6 +75,7 @@ export function makeFileTarget(input: {
     mapped: localPath != null,
     mappingRoot,
     pendingStatus: input.pendingStatus ?? null,
+    compareStatus: input.compareStatus ?? null,
   }
 }
 
@@ -82,7 +86,30 @@ const NOT_MAPPED_REASON = "未映射到本地"
  * Checkin、全局设置等不进入对象菜单。
  */
 export function buildFileMenu(target: FileTarget): FileMenuItem[][] {
+  // 目录对比中的 localOnly 项：服务端不存在，只保留本地查看与加入版本控制。
+  if (target.source === "compare" && target.compareStatus === "localOnly") {
+    return buildLocalOnlyMenu(target)
+  }
   return target.folder ? buildFolderMenu(target) : buildFileItemMenu(target)
+}
+
+/**
+ * 仅本地存在（localOnly）的对比结果项菜单：加入版本控制 + 本地查看。
+ */
+function buildLocalOnlyMenu(target: FileTarget): FileMenuItem[][] {
+  const sections: FileMenuItem[][] = []
+  if (!target.folder) {
+    sections.push([{ id: "viewFile", label: "查看文件", enabled: true }])
+  }
+  sections.push([
+    {
+      id: "add",
+      label: "加入版本控制",
+      enabled: target.localPath != null,
+      reason: target.localPath != null ? undefined : "缺少本地路径",
+    },
+  ])
+  return sections
 }
 
 /**
