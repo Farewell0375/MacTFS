@@ -559,7 +559,7 @@ chmod 644 <file>
 
 ## 十三、当前分支现状
 
-`FE-001` 至 `FE-008` 已完成，前端基础设施、接口契约、连接入口、工作台骨架、目录浏览、对象右键菜单、业务弹窗（Mapping / History / 目录对比 / 文件查看 / Diff）已就绪：
+`FE-001` 至 `FE-009` 已完成，前端基础设施、接口契约、连接入口、工作台骨架、目录浏览、对象右键菜单、业务弹窗（Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理）与 Get Latest / Checkout 执行链已就绪：
 
 - `electron/main.cjs` 已补齐服务检测、按本地开发约定拉起服务、token 读取与目录选择
 - `electron/preload.cjs` 已落地，通过 `contextBridge` 暴露 `window.mactfs` 窄接口
@@ -581,9 +581,10 @@ chmod 644 <file>
 - Electron 桥已含 `pathsExist` 本地存在性批量检测，用于「已映射未下载」状态
 - `home.tsx` 已编排 检测服务 → 连接 → 工作台 的视图状态机，统一维护 `selectedServerPath` 与 mappings 更新
 
+- `app/components/explorer/conflict-dialog.tsx`（逐项 / 批量取舍、冲突 Diff、应用后自动刷新）与 `workspace-shell.tsx` 的 `runGetLatest` / `runCheckout`（签出自动先取最新、冲突自动进弹窗、顶部通知条反馈）已落地
+
 仍未建立：
 
-- Get Latest / Checkout 冲突处理（FE-009）
 - Pending / Checkin 完整体验（FE-010）
 
-因此当前前端开发应从 `FE-009` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。
+因此当前前端开发应从 `FE-010` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。
