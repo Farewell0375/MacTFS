@@ -559,7 +559,7 @@ chmod 644 <file>
 
 ## 十三、当前分支现状
 
-`FE-001` 至 `FE-009` 已完成，前端基础设施、接口契约、连接入口、工作台骨架、目录浏览、对象右键菜单、业务弹窗（Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理）与 Get Latest / Checkout 执行链已就绪：
+`FE-001` 至 `FE-010` 已完成，前端基础设施、接口契约、连接入口、工作台骨架、目录浏览、对象右键菜单、业务弹窗（Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理）、Get Latest / Checkout 执行链与 Pending / Checkin 体验已就绪：
 
 - `electron/main.cjs` 已补齐服务检测、按本地开发约定拉起服务、token 读取与目录选择
 - `electron/preload.cjs` 已落地，通过 `contextBridge` 暴露 `window.mactfs` 窄接口
@@ -572,7 +572,7 @@ chmod 644 <file>
 - `app/components/app/workspace-shell.tsx` 已实现三栏工作台外壳，左 / 右 / 底面板支持折叠
 - `app/components/app/top-bar.tsx` 已实现顶部上下文栏（Server / Collection / Workspace + 面板开关 + 重新连接）
 - `app/components/explorer/source-tree-panel.tsx` 已实现目录树懒加载与同步展开；`folder-items-panel.tsx` 已实现当前目录文件列表（状态 / 版本 / 时间 / 本地路径，单击选中、双击进入）
-- `app/components/inspector/changes-panel.tsx` 已实现挂起更改基础列表与项级右键菜单（Included/Excluded 与 Checkin 留给 FE-010）；`app/components/logs/console-panel.tsx` 为面板骨架
+- `app/components/inspector/changes-panel.tsx` 已实现 Included / Excluded 分组、comment 必填校验与签入（成功展示 changeset 并刷新挂起 / 目录）；`app/components/logs/console-panel.tsx` 为面板骨架
 - `app/lib/tfs` 已沉淀 `session.ts`（固定上下文、`SERVER_ROOT_PATH`）、`path.ts`（路径工具）、`mapping.ts`（本地路径推导）、`status.ts`（状态文案与配色收口）、`actions.ts`（FileTarget / 菜单生成与置灰规则）及 `index.ts` 出口
 - `app/components/app/file-target-menu.tsx` 提供统一右键菜单容器；树、列表、Pending 项共用同一套动作模型
 - `workspace-shell.tsx` 持有 pendingChanges 共享状态并集中分发对象动作，已实现「取消映射」（不跳转浏览位置）与 Mapping / History / 目录对比弹窗编排
@@ -582,9 +582,11 @@ chmod 644 <file>
 - `home.tsx` 已编排 检测服务 → 连接 → 工作台 的视图状态机，统一维护 `selectedServerPath` 与 mappings 更新
 
 - `app/components/explorer/conflict-dialog.tsx`（逐项 / 批量取舍、冲突 Diff、应用后自动刷新）与 `workspace-shell.tsx` 的 `runGetLatest` / `runCheckout`（签出自动先取最新、冲突自动进弹窗、顶部通知条反馈）已落地
+- 对象动作中 unmap / getLatest / checkout / delete / undo / checkin 均已实际执行并按 9.3 规则刷新
 
 仍未建立：
 
-- Pending / Checkin 完整体验（FE-010）
+- FolderItemsPanel 拆分与动作编排收口（FE-011）
+- 操作日志面板与刷新反馈（FE-012）
 
-因此当前前端开发应从 `FE-010` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。
+因此当前前端开发应从 `FE-011` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。

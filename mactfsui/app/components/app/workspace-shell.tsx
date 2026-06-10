@@ -58,6 +58,9 @@ export function WorkspaceShell({
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [pendingLoading, setPendingLoading] = useState(false)
   const [pendingError, setPendingError] = useState<string | null>(null)
+  // Excluded 的挂起更改 serverPath 集合（不持久化），其余默认 Included。
+  const [excludedKeys, setExcludedKeys] = useState<Set<string>>(new Set())
+  const [checkinBusy, setCheckinBusy] = useState(false)
   // 中间列表刷新令牌：文件操作完成后递增触发重新加载。
   const [itemsRefreshToken, setItemsRefreshToken] = useState(0)
   const [notice, setNotice] = useState<ActionNotice | null>(null)
@@ -83,7 +86,14 @@ export function WorkspaceShell({
       return
     }
     setPendingError(null)
-    setPendingChanges(result.data?.pendingChanges ?? [])
+    const list = result.data?.pendingChanges ?? []
+    setPendingChanges(list)
+    // 清理已不存在的 Excluded 键，避免集合悬挂。
+    setExcludedKeys((prev) => {
+      const valid = new Set(list.map((change) => change.serverPath))
+      const next = new Set([...prev].filter((key) => valid.has(key)))
+      return next.size === prev.size ? prev : next
+    })
   }, [])
 
   useEffect(() => {
@@ -163,9 +173,49 @@ export function WorkspaceShell({
   )
 
   /**
+   * 切换某条挂起更改的 Included / Excluded 归属。
+   */
+  const toggleExcluded = useCallback((serverPath: string) => {
+    setExcludedKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(serverPath)) {
+        next.delete(serverPath)
+      } else {
+        next.add(serverPath)
+      }
+      return next
+    })
+  }, [])
+
+  /**
+   * 提交签入：只提交 Included 项，成功后展示 changeset 并刷新挂起更改与当前目录。
+   */
+  const handleCheckin = useCallback(
+    async (paths: string[], comment: string): Promise<boolean> => {
+      setCheckinBusy(true)
+      setNotice({ kind: "info", text: "正在签入…" })
+      const result = await api.checkin({ paths, comment })
+      setCheckinBusy(false)
+      if (!result.ok || !result.data) {
+        setNotice({ kind: "error", text: result.errorMessage ?? "签入失败" })
+        return false
+      }
+      const summary = result.data.checkin
+      setNotice({
+        kind: "info",
+        text: `签入成功：changeset ${summary.changeset}，提交 ${summary.submittedChanges} 项`,
+      })
+      await refreshPendingChanges()
+      setItemsRefreshToken((token) => token + 1)
+      return true
+    },
+    [refreshPendingChanges],
+  )
+
+  /**
    * 对象右键菜单动作统一分发器。
-   * unmap / getLatest / checkout 直接执行；map / history / compare / viewFile / diff 打开对应弹窗；
-   * delete / undo 由 FE-010 接管。
+   * unmap / getLatest / checkout / delete / undo 直接执行；
+   * map / history / compare / viewFile / diff 打开对应弹窗。
    */
   const handleFileAction = useCallback(
     async (target: FileTarget, action: FileActionId) => {
@@ -193,6 +243,40 @@ export function WorkspaceShell({
           await runCheckout(target)
           setActionBusy(false)
           break
+        case "delete": {
+          setActionBusy(true)
+          setNotice({ kind: "info", text: "正在挂起删除…" })
+          const result = await api.deleteFiles({
+            paths: [target.serverPath],
+            recursive: target.folder,
+          })
+          setActionBusy(false)
+          if (!result.ok || !result.data) {
+            setNotice({ kind: "error", text: result.errorMessage ?? "挂起删除失败" })
+            return
+          }
+          setNotice({ kind: "info", text: `已挂起删除 ${result.data.result.affected} 项` })
+          await refreshPendingChanges()
+          setItemsRefreshToken((token) => token + 1)
+          break
+        }
+        case "undo": {
+          setActionBusy(true)
+          setNotice({ kind: "info", text: "正在撤销更改…" })
+          const result = await api.undoFiles({
+            paths: [target.serverPath],
+            recursive: target.folder,
+          })
+          setActionBusy(false)
+          if (!result.ok || !result.data) {
+            setNotice({ kind: "error", text: result.errorMessage ?? "撤销更改失败" })
+            return
+          }
+          setNotice({ kind: "info", text: `已撤销 ${result.data.result.affected} 项更改` })
+          await refreshPendingChanges()
+          setItemsRefreshToken((token) => token + 1)
+          break
+        }
         case "map":
           setDialog({ kind: "mapping", serverPath: target.serverPath })
           break
@@ -222,11 +306,10 @@ export function WorkspaceShell({
           }
           break
         default:
-          // delete / undo（FE-010）由后续任务接管。
           break
       }
     },
-    [onMappingsChanged, runGetLatest, runCheckout],
+    [onMappingsChanged, runGetLatest, runCheckout, refreshPendingChanges],
   )
 
   /**
@@ -287,8 +370,12 @@ export function WorkspaceShell({
             <ChangesPanel
               mappings={session.mappings}
               pendingChanges={pendingChanges}
+              excludedKeys={excludedKeys}
               loading={pendingLoading}
               error={pendingError}
+              checkinBusy={checkinBusy}
+              onToggleExcluded={toggleExcluded}
+              onCheckin={handleCheckin}
               onFileAction={handleFileAction}
             />
           )}
