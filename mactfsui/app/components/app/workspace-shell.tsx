@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { TopBar, type PanelVisibility } from "~/components/app/top-bar"
 import { CompareDialog } from "~/components/explorer/compare-dialog"
+import { DiffDialog, type DiffRequest } from "~/components/explorer/diff-dialog"
+import { FileViewDialog } from "~/components/explorer/file-view-dialog"
 import { FolderItemsPanel } from "~/components/explorer/folder-items-panel"
 import { HistoryDialog } from "~/components/explorer/history-dialog"
 import { MappingDialog } from "~/components/explorer/mapping-dialog"
@@ -13,11 +15,13 @@ import { api } from "~/lib/api"
 import type { MappingInfo, PendingChange } from "~/lib/api"
 import type { FileActionId, FileTarget, WorkspaceSession } from "~/lib/tfs"
 
-// 当前打开的业务弹窗：Mapping / History / 目录对比（FE-007）。
+// 当前打开的业务弹窗：Mapping / History / 目录对比 / 文件查看 / Diff。
 type DialogState =
   | { kind: "mapping"; serverPath: string }
   | { kind: "history"; serverPath: string; folder: boolean }
   | { kind: "compare"; serverPath: string }
+  | { kind: "viewFile"; serverPath: string; localPath: string | null }
+  | { kind: "diff"; request: DiffRequest }
   | null
 
 /**
@@ -113,8 +117,27 @@ export function WorkspaceShell({
         case "compare":
           setDialog({ kind: "compare", serverPath: target.serverPath })
           break
+        case "viewFile":
+          setDialog({
+            kind: "viewFile",
+            serverPath: target.serverPath,
+            localPath: target.localPath,
+          })
+          break
+        case "diffLocalLatest":
+          if (target.localPath) {
+            setDialog({
+              kind: "diff",
+              request: {
+                mode: "localLatest",
+                serverPath: target.serverPath,
+                localPath: target.localPath,
+              },
+            })
+          }
+          break
         default:
-          // viewFile / diff（FE-008），getLatest / checkout（FE-009），delete / undo（FE-010）。
+          // getLatest / checkout（FE-009），delete / undo（FE-010）由后续任务接管。
           break
       }
     },
@@ -192,6 +215,12 @@ export function WorkspaceShell({
             serverPath={dialog.serverPath}
             folder={dialog.folder}
             onClose={() => setDialog(null)}
+            onDiffRevisions={(serverPath, sourceChangeset, targetChangeset) =>
+              setDialog({
+                kind: "diff",
+                request: { mode: "revisions", serverPath, sourceChangeset, targetChangeset },
+              })
+            }
           />
         )}
         {dialog?.kind === "compare" && (
@@ -201,6 +230,16 @@ export function WorkspaceShell({
             onClose={() => setDialog(null)}
             onFileAction={handleFileAction}
           />
+        )}
+        {dialog?.kind === "viewFile" && (
+          <FileViewDialog
+            serverPath={dialog.serverPath}
+            localPath={dialog.localPath}
+            onClose={() => setDialog(null)}
+          />
+        )}
+        {dialog?.kind === "diff" && (
+          <DiffDialog request={dialog.request} onClose={() => setDialog(null)} />
         )}
       </div>
     </TooltipProvider>
