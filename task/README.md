@@ -31,10 +31,10 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 3 | 13 | 23% |
+| Frontend | 4 | 13 | 31% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 27 | 46 | 59% |
+| Overall | 28 | 46 | 61% |
 
 ## 当前阶段
 
@@ -46,7 +46,7 @@ Frontend Workspace UI
 
 ## 下一步任务
 
-- [FE-004-实现工作台布局折叠面板与同步导航.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-004-实现工作台布局折叠面板与同步导航.md)
+- [FE-005-实现服务端目录树与当前目录文件列表.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-005-实现服务端目录树与当前目录文件列表.md)
 
 ## Core
 
@@ -94,7 +94,7 @@ Frontend Workspace UI
 | [FE-001-实现Electron启动服务Preload与API客户端.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-001-实现Electron启动服务Preload与API客户端.md) | done | P0 |
 | [FE-002-补齐前端集成所需服务端接口与类型契约.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-002-补齐前端集成所需服务端接口与类型契约.md) | done | P0 |
 | [FE-003-实现连接页Collection选择与Workspace上下文.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-003-实现连接页Collection选择与Workspace上下文.md) | done | P0 |
-| [FE-004-实现工作台布局折叠面板与同步导航.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-004-实现工作台布局折叠面板与同步导航.md) | todo | P0 |
+| [FE-004-实现工作台布局折叠面板与同步导航.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-004-实现工作台布局折叠面板与同步导航.md) | done | P0 |
 | [FE-005-实现服务端目录树与当前目录文件列表.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-005-实现服务端目录树与当前目录文件列表.md) | todo | P0 |
 | [FE-006-实现对象右键菜单与通用动作模型.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-006-实现对象右键菜单与通用动作模型.md) | todo | P0 |
 | [FE-007-实现MappingHistory与目录对比弹窗.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-007-实现MappingHistory与目录对比弹窗.md) | todo | P0 |

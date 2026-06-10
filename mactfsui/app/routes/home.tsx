@@ -5,6 +5,7 @@ import { WorkspaceShell } from "~/components/app/workspace-shell"
 import { Button } from "~/components/ui/button"
 import { getServiceStatus, isElectron, startService } from "~/lib/electron"
 import type { ServiceStatus } from "~/lib/electron"
+import { SERVER_ROOT_PATH } from "~/lib/tfs/session"
 import type { WorkspaceSession } from "~/lib/tfs/session"
 
 // 顶层视图状态：检测服务、服务未就绪、连接入口、已进入工作台。
@@ -12,12 +13,13 @@ type AppPhase = "checking" | "blocked" | "connect" | "workspace"
 
 /**
  * 第一版前端入口：先确保本地服务就绪，再走连接 / Collection / Workspace 流程，
- * 进入工作台后持有固定上下文（FE-003）。
+ * 进入工作台后持有固定上下文，并统一维护左树与中间列表共享的当前路径（FE-004）。
  */
 export default function Home() {
   const [phase, setPhase] = useState<AppPhase>("checking")
   const [status, setStatus] = useState<ServiceStatus | null>(null)
   const [session, setSession] = useState<WorkspaceSession | null>(null)
+  const [selectedServerPath, setSelectedServerPath] = useState(SERVER_ROOT_PATH)
 
   /**
    * 检测本地服务，未就绪时在 Electron 环境下尝试自动拉起。
@@ -37,10 +39,11 @@ export default function Home() {
   }, [bootstrap])
 
   /**
-   * 连接流程完成后固定上下文并进入工作台。
+   * 连接流程完成后固定上下文并进入工作台，当前路径重置到根目录。
    */
   const handleReady = useCallback((next: WorkspaceSession) => {
     setSession(next)
+    setSelectedServerPath(SERVER_ROOT_PATH)
     setPhase("workspace")
   }, [])
 
@@ -52,8 +55,22 @@ export default function Home() {
     setPhase("connect")
   }, [])
 
+  /**
+   * 同步导航：左侧树与中间列表共用的当前服务端路径变更入口。
+   */
+  const handleNavigate = useCallback((serverPath: string) => {
+    setSelectedServerPath(serverPath)
+  }, [])
+
   if (phase === "workspace" && session) {
-    return <WorkspaceShell session={session} onReconnect={handleReconnect} />
+    return (
+      <WorkspaceShell
+        session={session}
+        selectedServerPath={selectedServerPath}
+        onNavigate={handleNavigate}
+        onReconnect={handleReconnect}
+      />
+    )
   }
 
   if (phase === "connect") {

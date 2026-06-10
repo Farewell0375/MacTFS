@@ -559,7 +559,7 @@ chmod 644 <file>
 
 ## 十三、当前分支现状
 
-`FE-001`、`FE-002`、`FE-003` 已完成，前端基础设施、接口契约与连接入口已就绪：
+`FE-001`、`FE-002`、`FE-003`、`FE-004` 已完成，前端基础设施、接口契约、连接入口与工作台骨架已就绪：
 
 - `electron/main.cjs` 已补齐服务检测、按本地开发约定拉起服务、token 读取与目录选择
 - `electron/preload.cjs` 已落地，通过 `contextBridge` 暴露 `window.mactfs` 窄接口
@@ -569,13 +569,15 @@ chmod 644 <file>
 - `app/lib/api/endpoints.ts` 已封装全部工作台所需接口（含 workspace/context、mappings/check-target、files/content、conflicts）
 - 服务端已补齐 `GET /api/workspace/context`、`POST /api/mappings/check-target`、`GET /api/files/content`、`GET /api/conflicts`、`POST /api/conflicts/apply`
 - `app/components/app/connect-view.tsx` 已实现连接表单、Collection 选择与确保默认 Workspace
-- `app/components/app/workspace-shell.tsx` 已实现工作台占位外壳，展示固定 Collection / Workspace 上下文
-- `app/lib/tfs/session.ts` 已定义工作台固定上下文 `WorkspaceSession`
-- `home.tsx` 已编排 检测服务 → 连接 → 工作台 的视图状态机
+- `app/components/app/workspace-shell.tsx` 已实现三栏工作台外壳，左 / 右 / 底面板支持折叠
+- `app/components/app/top-bar.tsx` 已实现顶部上下文栏（Server / Collection / Workspace + 面板开关 + 重新连接）
+- `app/components/explorer/source-tree-panel.tsx`、`folder-items-panel.tsx`、`app/components/inspector/changes-panel.tsx`、`app/components/logs/console-panel.tsx` 已建立各面板骨架
+- `app/lib/tfs/session.ts` 已定义工作台固定上下文 `WorkspaceSession` 与根路径常量 `SERVER_ROOT_PATH`
+- `home.tsx` 已编排 检测服务 → 连接 → 工作台 的视图状态机，并统一维护 `selectedServerPath` 同步导航状态
 
 仍未建立：
 
-- 三栏工作台布局与折叠面板（FE-004）
-- 目录树、中间列表、右键菜单、各业务弹窗（FE-005 起）
+- 目录树数据加载与中间文件列表（FE-005）
+- 右键菜单与各业务弹窗（FE-006 起）
 
-因此当前前端开发应从 `FE-004` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。
+因此当前前端开发应从 `FE-005` 继续推进，不再参考旧分支“已经做完”的状态来判断进度。
