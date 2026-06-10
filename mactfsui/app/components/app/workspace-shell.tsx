@@ -35,8 +35,9 @@ export function WorkspaceShell({
     changes: true,
     console: true,
   })
-  // 中间列表刷新令牌：文件操作完成后递增触发重新加载。
+  // 中间列表 / 底部日志刷新令牌：文件操作完成后递增触发重新加载。
   const [itemsRefreshToken, setItemsRefreshToken] = useState(0)
+  const [logsRefreshToken, setLogsRefreshToken] = useState(0)
 
   /**
    * 切换指定面板的展开 / 收起状态。
@@ -52,11 +53,19 @@ export function WorkspaceShell({
     setItemsRefreshToken((token) => token + 1)
   }, [])
 
+  /**
+   * 触发底部操作日志重新加载。
+   */
+  const refreshLogs = useCallback(() => {
+    setLogsRefreshToken((token) => token + 1)
+  }, [])
+
   const pending = usePendingChanges()
   const actions = useFileActions({
     onMappingsChanged,
     refreshPendingChanges: pending.refresh,
     refreshItems,
+    refreshLogs,
   })
 
   return (
@@ -118,7 +127,13 @@ export function WorkspaceShell({
           )}
         </div>
 
-        {panels.console && <ConsolePanel />}
+        {panels.console && (
+          <ConsolePanel
+            refreshToken={logsRefreshToken}
+            busy={actions.actionBusy || actions.checkinBusy}
+            busyText={actions.notice?.kind === "info" ? actions.notice.text : null}
+          />
+        )}
 
         <WorkspaceDialogs
           dialog={actions.dialog}

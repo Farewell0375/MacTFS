@@ -21,21 +21,23 @@ export interface ActionNotice {
   text: string
 }
 
-// 动作编排所需的上层依赖：mappings 更新与两类刷新入口。
+// 动作编排所需的上层依赖：mappings 更新与各类刷新入口。
 interface FileActionsDeps {
   onMappingsChanged: (mappings: MappingInfo[]) => void
   refreshPendingChanges: () => Promise<void>
   refreshItems: () => void
+  refreshLogs: () => void
 }
 
 /**
  * 对象动作编排 hook：集中持有弹窗开关、通知与忙碌状态，
- * 把右键菜单动作映射为 API 执行或弹窗打开，并按统一规则刷新。
+ * 把右键菜单动作映射为 API 执行或弹窗打开，并按统一规则刷新（含操作日志）。
  */
 export function useFileActions({
   onMappingsChanged,
   refreshPendingChanges,
   refreshItems,
+  refreshLogs,
 }: FileActionsDeps) {
   const [dialog, setDialog] = useState<WorkspaceDialogState>(null)
   const [notice, setNotice] = useState<ActionNotice | null>(null)
@@ -51,6 +53,7 @@ export function useFileActions({
         serverPath: target.serverPath,
         recursive: target.folder,
       })
+      refreshLogs()
       if (!result.ok || !result.data) {
         setNotice({ kind: "error", text: result.errorMessage ?? "获取最新失败" })
         return false
@@ -74,7 +77,7 @@ export function useFileActions({
       }
       return false
     },
-    [refreshItems],
+    [refreshItems, refreshLogs],
   )
 
   /**
@@ -92,6 +95,7 @@ export function useFileActions({
         paths: [target.serverPath],
         recursive: target.folder,
       })
+      refreshLogs()
       if (!result.ok || !result.data) {
         setNotice({ kind: "error", text: result.errorMessage ?? "签出失败" })
         return
@@ -107,7 +111,7 @@ export function useFileActions({
       })
       await refreshPendingChanges()
     },
-    [runGetLatest, refreshPendingChanges],
+    [runGetLatest, refreshPendingChanges, refreshLogs],
   )
 
   /**
@@ -122,6 +126,7 @@ export function useFileActions({
       setNotice({ kind: "info", text: labels.doing })
       const call = action === "delete" ? api.deleteFiles : api.undoFiles
       const result = await call({ paths: [target.serverPath], recursive: target.folder })
+      refreshLogs()
       if (!result.ok || !result.data) {
         setNotice({ kind: "error", text: result.errorMessage ?? labels.fail })
         return
@@ -130,7 +135,7 @@ export function useFileActions({
       await refreshPendingChanges()
       refreshItems()
     },
-    [refreshPendingChanges, refreshItems],
+    [refreshPendingChanges, refreshItems, refreshLogs],
   )
 
   /**
@@ -144,6 +149,7 @@ export function useFileActions({
       switch (action) {
         case "unmap": {
           const result = await api.deleteMapping({ serverPath: target.serverPath })
+          refreshLogs()
           if (!result.ok) {
             setNotice({ kind: "error", text: result.errorMessage ?? "取消映射失败" })
             return
@@ -202,7 +208,7 @@ export function useFileActions({
           break
       }
     },
-    [onMappingsChanged, runGetLatest, runCheckout, runFileOperation],
+    [onMappingsChanged, runGetLatest, runCheckout, runFileOperation, refreshLogs],
   )
 
   /**
@@ -214,6 +220,7 @@ export function useFileActions({
       setNotice({ kind: "info", text: "正在签入…" })
       const result = await api.checkin({ paths, comment })
       setCheckinBusy(false)
+      refreshLogs()
       if (!result.ok || !result.data) {
         setNotice({ kind: "error", text: result.errorMessage ?? "签入失败" })
         return false
@@ -227,7 +234,7 @@ export function useFileActions({
       refreshItems()
       return true
     },
-    [refreshPendingChanges, refreshItems],
+    [refreshPendingChanges, refreshItems, refreshLogs],
   )
 
   /**
@@ -249,8 +256,9 @@ export function useFileActions({
     setDialog(null)
     refreshItems()
     void refreshPendingChanges()
+    refreshLogs()
     setNotice({ kind: "info", text: "冲突处理完成，已刷新状态" })
-  }, [refreshItems, refreshPendingChanges])
+  }, [refreshItems, refreshPendingChanges, refreshLogs])
 
   return {
     dialog,
