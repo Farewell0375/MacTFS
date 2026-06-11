@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -58,9 +58,20 @@ cd mactfsui && pnpm electron:dev
 
 ## 完成记录
 
-待完成后填写：
-
 - 实际修改文件：
+  - `mactfsui/electron/main.cjs`
+  - `mactfsui/app/components/app/top-bar.tsx`（拖拽区域 + 红绿灯留白）
+  - `mactfsui/app/app.css`（app-drag / app-no-drag 工具类）
+  - `mactfsui/app/root.tsx`（首屏前挂载 html.vibrancy 标记）
+  - 新增 `mactfsui/app/lib/platform.ts`
 - 实际实现内容：
+  - macOS 下 `titleBarStyle: "hiddenInset"` + `trafficLightPosition {16,16}`，非 macOS 回退系统标题栏
+  - 开启窗口 vibrancy（`sidebar` 材质，followWindow）；macOS 背景设全透明配合 `html.vibrancy body { background: transparent }` 让毛玻璃可透出；非 macOS 用实色背景
+  - `show:false + ready-to-show` 显示并默认最大化铺满屏幕（带上现代风分支已确认的体验决策）
+  - `minWidth 980 / minHeight 640`
+  - 顶栏 `app-drag` 拖拽 + 控件 `app-no-drag`，macOS Electron 下 `pl-20` 为红绿灯留白
 - 测试结果：
+  - `pnpm typecheck` 通过、`pnpm build` 通过，产物确认 app-drag / vibrancy 已编译
+  - 毛玻璃透出效果在 FE-029 侧栏完成后整体截图验证
 - 遗留问题：
+  - 登录页（无顶栏）拖拽区在 FE-028 补充

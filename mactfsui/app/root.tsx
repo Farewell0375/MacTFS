@@ -16,6 +16,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* 首屏前标记 vibrancy 环境：macOS Electron 下页面底透明以透出窗口毛玻璃 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var ua=navigator.userAgent;if(ua.includes("Electron")&&ua.includes("Macintosh"))document.documentElement.classList.add("vibrancy")}catch(e){}})()`,
+          }}
+        />
         <Meta />
         <Links />
       </head>

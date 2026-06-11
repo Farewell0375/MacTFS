@@ -3,6 +3,7 @@ import { PanelBottom, PanelLeft, PanelRight } from "lucide-react"
 import { Button } from "~/components/ui/button"
 import { Separator } from "~/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip"
+import { isMacElectron } from "~/lib/platform"
 import type { WorkspaceSession } from "~/lib/tfs/session"
 import { cn } from "~/lib/utils"
 
@@ -30,8 +31,15 @@ export function TopBar({
   onReconnect: () => void
   onManageWorkspace: () => void
 }) {
+  // 隐藏式标题栏下顶栏整体作为拖拽区，并为左上角红绿灯预留空间。
+  const macInset = isMacElectron()
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b bg-background px-3">
+    <header
+      className={cn(
+        "app-drag flex h-12 shrink-0 items-center justify-between gap-3 border-b bg-background px-3",
+        macInset && "pl-20",
+      )}
+    >
       <div className="flex min-w-0 items-center gap-2 text-sm">
         <span className="shrink-0 font-semibold">MacTFS</span>
         <Separator orientation="vertical" className="h-4!" />
@@ -49,7 +57,7 @@ export function TopBar({
         <span className="max-w-44 truncate font-mono text-xs">{session.workspace}</span>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="app-no-drag flex shrink-0 items-center gap-1">
         <PanelToggle
           label="源码目录面板"
           active={panels.tree}

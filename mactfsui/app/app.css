@@ -153,3 +153,12 @@ html.vibrancy,
 html.vibrancy body {
     background: transparent;
 }
+
+/* 隐藏式标题栏下的窗口拖拽区域：顶栏整体可拖动，交互控件单独豁免。 */
+@utility app-drag {
+  -webkit-app-region: drag;
+}
+
+@utility app-no-drag {
+  -webkit-app-region: no-drag;
+}
