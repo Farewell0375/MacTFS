@@ -31,10 +31,10 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 21 | 24 | 88% |
+| Frontend | 22 | 24 | 92% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 45 | 57 | 79% |
+| Overall | 46 | 57 | 81% |
 
 ## 当前阶段
 
@@ -48,7 +48,7 @@ blocked
 
 ## 下一步任务
 
-- [FE-022-实现工作区与Mapping集中管理.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-022-实现工作区与Mapping集中管理.md)
+- [FE-023-实现分支.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-023-实现分支.md)
 - [FEATURE-001-连接与目录浏览端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/feature/FEATURE-001-连接与目录浏览端到端验收.md)（需要真实 TFS 环境）
 
 ## Core
@@ -115,7 +115,7 @@ blocked
 | [FE-019-实现对象属性与获取特定版本.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-019-实现对象属性与获取特定版本.md) | done | P0 |
 | [FE-020-实现重命名.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-020-实现重命名.md) | done | P0 |
 | [FE-021-实现变更集回滚.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-021-实现变更集回滚.md) | done | P1 |
-| [FE-022-实现工作区与Mapping集中管理.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-022-实现工作区与Mapping集中管理.md) | todo | P1 |
+| [FE-022-实现工作区与Mapping集中管理.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-022-实现工作区与Mapping集中管理.md) | done | P1 |
 | [FE-023-实现分支.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-023-实现分支.md) | todo | P1 |
 | [FE-024-实现合并.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-024-实现合并.md) | todo | P1 |
 

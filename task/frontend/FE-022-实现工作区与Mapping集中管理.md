@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -74,4 +74,39 @@ pnpm typecheck
 
 ## 完成记录
 
-待完成后填写。
+### 实际修改文件
+
+- `mactfsui/app/components/explorer/workspace-manage-dialog.tsx`（新增）：集中管理弹窗
+  - 工作区信息区：Workspace / 服务器 / Collection / Owner / Computer / Mapping 数量（Owner、Computer 通过幂等的 `POST /api/workspace/ensure` 获取，未新增服务端接口）
+  - Mapping 表格：服务端路径、本地路径、本地目录存在性（Electron `pathsExist` 批量检测，不存在标红）
+  - 新增：输入服务端路径（校验 `$/` 前缀）→ 复用既有 `MappingDialog`（父目录选择 + 后端预校验 + 可选立即获取）
+  - 删除：确认弹窗（说明不删除本地文件），调用既有 `DELETE /api/mappings`
+  - 修改本地路径：内置 `EditMappingDialog`，选择新父目录 → `check-target` 预校验 → 「删旧 + 加新」，提示需重新获取
+- `mactfsui/app/components/app/top-bar.tsx`：顶栏新增「工作区」按钮
+- `mactfsui/app/components/app/workspace-shell.tsx`：持有弹窗显隐，Mapping 变化后统一刷新 mappings 与目录列表
+
+### 实际实现内容
+
+- 顶栏「工作区」一键打开集中管理弹窗，无需到目录树逐个右键
+- 全部 mapping 一屏可见，本地目录缺失（已映射未下载 / 被手动删除）醒目标红
+- 三类操作（新增 / 删除 / 改路径）完成后目录树映射标识、列表状态列同步刷新
+- 未新增服务端接口，全部复用既有 mappings API
+
+### 已执行测试
+
+- `pnpm typecheck`：通过
+- 服务端无改动，无需重新构建（沿用 FE-021 构建产物）
+
+### 未执行测试及原因
+
+- 真实 TFS 环境的映射增删改落盘验证：本机无环境，待 FEATURE 阶段执行
+
+### 是否满足验收标准
+
+- 工作区信息与全部 Mapping 展示、增 / 删 / 改、本地目录缺失标识：满足（代码层面）
+- 前端 typecheck 通过：满足
+
+### 遗留问题
+
+- 「修改本地路径」中删旧成功但加新失败时会处于无映射状态（已在弹窗错误提示中说明需重新映射）
+- 删除映射后该子树挂起更改的处理沿用服务端默认行为，未做额外清理

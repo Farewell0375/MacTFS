@@ -4,6 +4,7 @@ import { TopBar, type PanelVisibility } from "~/components/app/top-bar"
 import { WorkspaceDialogs } from "~/components/app/workspace-dialogs"
 import { FolderItemsPanel } from "~/components/explorer/folder-items-panel"
 import { SourceTreePanel } from "~/components/explorer/source-tree-panel"
+import { WorkspaceManageDialog } from "~/components/explorer/workspace-manage-dialog"
 import { ChangesPanel } from "~/components/inspector/changes-panel"
 import { ConsolePanel } from "~/components/logs/console-panel"
 import { TooltipProvider } from "~/components/ui/tooltip"
@@ -38,6 +39,8 @@ export function WorkspaceShell({
   // 中间列表 / 底部日志刷新令牌：文件操作完成后递增触发重新加载。
   const [itemsRefreshToken, setItemsRefreshToken] = useState(0)
   const [logsRefreshToken, setLogsRefreshToken] = useState(0)
+  // 工作区集中管理弹窗显隐。
+  const [manageOpen, setManageOpen] = useState(false)
 
   /**
    * 切换指定面板的展开 / 收起状态。
@@ -76,6 +79,7 @@ export function WorkspaceShell({
           panels={panels}
           onTogglePanel={togglePanel}
           onReconnect={onReconnect}
+          onManageWorkspace={() => setManageOpen(true)}
         />
 
         {actions.notice && (
@@ -150,6 +154,18 @@ export function WorkspaceShell({
           onRenameConfirmed={actions.handleRenameConfirmed}
           onRollback={actions.runRollback}
         />
+
+        {manageOpen && (
+          <WorkspaceManageDialog
+            session={session}
+            onClose={() => setManageOpen(false)}
+            onMappingsChanged={(mappings) => {
+              // Mapping 变化影响树映射标识与列表状态列，统一刷新。
+              onMappingsChanged(mappings)
+              refreshItems()
+            }}
+          />
+        )}
       </div>
     </TooltipProvider>
   )

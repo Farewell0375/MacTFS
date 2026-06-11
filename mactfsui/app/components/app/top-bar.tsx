@@ -22,11 +22,13 @@ export function TopBar({
   panels,
   onTogglePanel,
   onReconnect,
+  onManageWorkspace,
 }: {
   session: WorkspaceSession
   panels: PanelVisibility
   onTogglePanel: (panel: keyof PanelVisibility) => void
   onReconnect: () => void
+  onManageWorkspace: () => void
 }) {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b bg-background px-3">
@@ -70,6 +72,9 @@ export function TopBar({
           <PanelBottom />
         </PanelToggle>
         <Separator orientation="vertical" className="mx-1 h-4!" />
+        <Button size="sm" variant="outline" onClick={onManageWorkspace}>
+          工作区
+        </Button>
         <Button size="sm" variant="outline" onClick={onReconnect}>
           重新连接
         </Button>
