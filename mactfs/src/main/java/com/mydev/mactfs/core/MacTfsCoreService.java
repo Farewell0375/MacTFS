@@ -1237,8 +1237,12 @@ public class MacTfsCoreService {
         }
         boolean exists = localFile != null && localFile.exists();
         boolean remoteChanged = item.getLocalVersion() > 0 && item.getLatestVersion() > item.getLocalVersion();
-        // mtime 只能作为远端版本变化时的辅助信号，避免 Get Latest 后因本地时间晚于签入时间误报本地修改。
-        boolean localModified = remoteChanged && exists && item.getCheckinDate() != null && localFile.lastModified() > item.getCheckinDate().getTimeInMillis();
+        // 服务器工作区下文件取下来默认只读，变为可写说明被本地解锁修改过（对齐 VS 的 writable 判定），
+        // 这样未签出的纯本地修改也能在目录对比中暴露出来。
+        boolean writableFile = exists && !isFolder(item.getItemType()) && localFile.canWrite();
+        // mtime 仅作为远端版本变化时的辅助信号，避免 Get Latest 后因本地时间晚于签入时间误报本地修改。
+        boolean mtimeNewer = exists && item.getCheckinDate() != null && localFile.lastModified() > item.getCheckinDate().getTimeInMillis();
+        boolean localModified = writableFile || (remoteChanged && mtimeNewer);
         if (!exists && item.getLocalVersion() > 0) {
             return "localDeleted";
         }
