@@ -248,8 +248,9 @@ function PendingRow({
         </span>
         <Badge
           variant="secondary"
-          className={cn("shrink-0 rounded-md", statusBadgeClass(change.status))}
+          className={cn("shrink-0 gap-1.5 rounded-md", statusBadgeClass(change.status))}
         >
+          <span className="size-1.5 rounded-full bg-current opacity-60" />
           {statusLabel(change.status)}
         </Badge>
       </div>

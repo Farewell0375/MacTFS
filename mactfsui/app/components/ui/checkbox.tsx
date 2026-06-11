@@ -19,7 +19,7 @@ function Checkbox({
     >
       <CheckboxPrimitive.Indicator
         data-slot="checkbox-indicator"
-        className="grid place-content-center text-current transition-none [&>svg]:size-3.5"
+        className="animate-in zoom-in-50 fade-in grid place-content-center text-current duration-150 [&>svg]:size-3.5"
       >
         <CheckIcon
         />

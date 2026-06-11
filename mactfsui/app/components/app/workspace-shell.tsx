@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 import { TopBar, type PanelVisibility } from "~/components/app/top-bar"
 import { WorkspaceDialogs } from "~/components/app/workspace-dialogs"
@@ -7,6 +7,7 @@ import { SourceTreePanel } from "~/components/explorer/source-tree-panel"
 import { WorkspaceManageDialog } from "~/components/explorer/workspace-manage-dialog"
 import { ChangesPanel } from "~/components/inspector/changes-panel"
 import { ConsolePanel } from "~/components/logs/console-panel"
+import { Toaster, showToast } from "~/components/ui/toaster"
 import { TooltipProvider } from "~/components/ui/tooltip"
 import { useFileActions } from "~/hooks/use-file-actions"
 import { usePendingChanges } from "~/hooks/use-pending-changes"
@@ -71,6 +72,19 @@ export function WorkspaceShell({
     refreshLogs,
   })
 
+  // 把动作编排的 notice 转成右下角 toast：固定 id 让「正在…」与结果复用同一条目。
+  useEffect(() => {
+    if (!actions.notice) {
+      return
+    }
+    const { kind, text } = actions.notice
+    showToast({
+      id: "action",
+      kind: kind === "error" ? "error" : text.startsWith("正在") ? "loading" : "success",
+      text,
+    })
+  }, [actions.notice])
+
   return (
     <TooltipProvider>
       {/* Finder 式布局：根容器不铺底色，vibrancy 下毛玻璃从顶栏与左侧栏透出 */}
@@ -82,22 +96,6 @@ export function WorkspaceShell({
           onReconnect={onReconnect}
           onManageWorkspace={() => setManageOpen(true)}
         />
-
-        {actions.notice && (
-          <div
-            className={cn(
-              "flex shrink-0 items-center gap-2 border-b px-3 py-1 text-xs",
-              actions.notice.kind === "error"
-                ? "bg-destructive/10 text-destructive"
-                : "bg-primary/5 text-foreground",
-            )}
-          >
-            {actions.actionBusy && (
-              <span className="size-2 animate-pulse rounded-full bg-primary" />
-            )}
-            {actions.notice.text}
-          </div>
-        )}
 
         <div className="flex min-h-0 flex-1">
           {/* 左右面板保持挂载，通过宽度过渡实现折叠 / 展开动画 */}
@@ -187,6 +185,8 @@ export function WorkspaceShell({
             }}
           />
         )}
+
+        <Toaster />
       </div>
     </TooltipProvider>
   )

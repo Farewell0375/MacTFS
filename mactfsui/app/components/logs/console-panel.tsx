@@ -97,7 +97,8 @@ export function ConsolePanel({
             {ordered.map((entry, index) => (
               <li
                 key={`${entry.startedAt}-${entry.operation}-${index}`}
-                className="flex h-7 items-center gap-2 rounded px-1.5 text-xs hover:bg-muted"
+                className="animate-in fade-in slide-in-from-top-1 flex h-7 items-center gap-2 rounded fill-mode-backwards px-1.5 text-xs duration-200 transition-colors hover:bg-muted"
+                style={{ animationDelay: `${Math.min(index, 6) * 25}ms` }}
                 title={entry.errorMessage ?? entry.summary}
               >
                 {entry.success ? (
