@@ -395,6 +395,35 @@ public class MacTfsCoreService {
     }
 
     /**
+     * 分支：把源服务端路径分叉到目标路径（pendBranch 产生挂起更改，签入后服务器生效）。
+     * 目标路径所在父目录必须已映射；changesetId 为 null 时基于 latest。
+     */
+    public CoreOperationResult<TfsFileOperationResult> branch(final TfsConnectionConfig config,
+                                                              final String collectionName,
+                                                              final String workspaceName,
+                                                              final String sourceServerPath,
+                                                              final String targetServerPath,
+                                                              final Integer changesetId) {
+        return execute("branch", new CoreCallable<TfsFileOperationResult>() {
+            @Override
+            public TfsFileOperationResult call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                String source = normalizeServerPath(require(sourceServerPath, "sourceServerPath"));
+                String target = normalizeServerPath(require(targetServerPath, "targetServerPath"));
+                if (source.equals(target)) {
+                    throw new IllegalArgumentException("Target path is same as source path");
+                }
+                VersionSpec version = changesetId == null
+                    ? LatestVersionSpec.INSTANCE
+                    : new ChangesetVersionSpec(changesetId.intValue());
+                int affected = workspace.pendBranch(source, target, version, LockLevel.NONE, RecursionType.FULL, GetOptions.NONE, PendChangesOptions.NONE);
+                logs.add("Branch pended: " + source + " -> " + target);
+                return new TfsFileOperationResult("branch", affected, Collections.<String>emptyList());
+            }
+        });
+    }
+
+    /**
      * 回滚变更集（只产生挂起更改，需用户审查后签入）：
      * mode=single 仅反做该 changeset；mode=toVersion 反做该 changeset 之后的全部改动。
      */

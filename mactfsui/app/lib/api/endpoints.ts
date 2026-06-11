@@ -175,6 +175,13 @@ export function rollback(body: { serverPath: string; mode: "single" | "toVersion
 }
 
 /**
+ * 分支：把源路径分叉到目标路径（产生 branch 挂起更改），changeset 缺省为 latest。
+ */
+export function branch(body: { sourceServerPath: string; targetServerPath: string; changeset?: number }) {
+  return apiClient.post<{ result: FileOperationResult }>("/api/files/branch", { body })
+}
+
+/**
  * 读取当前 Workspace 的挂起更改。
  */
 export function getPendingChanges(params: { serverPath?: string } = {}) {

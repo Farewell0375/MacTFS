@@ -447,6 +447,19 @@ public class MacTfsServer {
             }
         }));
 
+        Spark.post("/api/files/branch", (request, response) -> handle(request, response, "branch", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                Number changeset = (Number) body.get("changeset");
+                CoreOperationResult<TfsFileOperationResult> result = coreService.branch(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "sourceServerPath"), "sourceServerPath"), require(stringValue(body, "targetServerPath"), "targetServerPath"), changeset == null ? null : Integer.valueOf(changeset.intValue()));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("result", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
         Spark.post("/api/files/rollback", (request, response) -> handle(request, response, "rollback", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {

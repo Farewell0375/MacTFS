@@ -1,4 +1,5 @@
 import { ConfirmDialog } from "~/components/app/confirm-dialog"
+import { BranchDialog } from "~/components/explorer/branch-dialog"
 import { CompareDialog } from "~/components/explorer/compare-dialog"
 import { ConflictDialog } from "~/components/explorer/conflict-dialog"
 import { DiffDialog } from "~/components/explorer/diff-dialog"
@@ -28,6 +29,7 @@ export function WorkspaceDialogs({
   onGetVersion,
   onRenameConfirmed,
   onRollback,
+  onBranchConfirmed,
 }: {
   dialog: WorkspaceDialogState
   mappings: MappingInfo[]
@@ -40,6 +42,11 @@ export function WorkspaceDialogs({
   onGetVersion: (serverPath: string, changeset: number, folder: boolean) => Promise<boolean>
   onRenameConfirmed: (serverPath: string, newName: string) => Promise<boolean>
   onRollback: (serverPath: string, mode: "single" | "toVersion", changeset: number) => Promise<boolean>
+  onBranchConfirmed: (
+    sourceServerPath: string,
+    targetServerPath: string,
+    changeset: number | undefined,
+  ) => Promise<boolean>
 }) {
   if (!dialog) {
     return null
@@ -105,6 +112,17 @@ export function WorkspaceDialogs({
           serverPath={dialog.serverPath}
           folder={dialog.folder}
           onConfirm={(newName) => onRenameConfirmed(dialog.serverPath, newName)}
+          onClose={onClose}
+        />
+      )
+    case "branch":
+      return (
+        <BranchDialog
+          sourceServerPath={dialog.serverPath}
+          mappings={mappings}
+          onConfirm={(targetServerPath, changeset) =>
+            onBranchConfirmed(dialog.serverPath, targetServerPath, changeset)
+          }
           onClose={onClose}
         />
       )

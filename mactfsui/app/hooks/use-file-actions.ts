@@ -17,6 +17,7 @@ export type WorkspaceDialogState =
   | { kind: "properties"; target: FileTarget }
   | { kind: "getVersion"; serverPath: string; folder: boolean }
   | { kind: "rename"; serverPath: string; folder: boolean }
+  | { kind: "branch"; serverPath: string }
   | null
 
 // 顶部细条通知：信息（操作摘要）或错误。
@@ -259,6 +260,9 @@ export function useFileActions({
         case "rename":
           setDialog({ kind: "rename", serverPath: target.serverPath, folder: target.folder })
           break
+        case "branch":
+          setDialog({ kind: "branch", serverPath: target.serverPath })
+          break
         case "checkout":
           setActionBusy(true)
           setNotice({ kind: "info", text: "正在签出…" })
@@ -398,6 +402,33 @@ export function useFileActions({
   )
 
   /**
+   * 分支确认后执行：产生 branch 挂起更改并刷新挂起更改与目录列表。
+   */
+  const handleBranchConfirmed = useCallback(
+    async (
+      sourceServerPath: string,
+      targetServerPath: string,
+      changeset: number | undefined,
+    ): Promise<boolean> => {
+      setNotice({ kind: "info", text: "正在创建分支…" })
+      const result = await api.branch({ sourceServerPath, targetServerPath, changeset })
+      refreshLogs()
+      if (!result.ok || !result.data) {
+        setNotice({ kind: "error", text: result.errorMessage ?? "创建分支失败" })
+        return false
+      }
+      setNotice({
+        kind: "info",
+        text: `已挂起分支 ${result.data.result.affected} 项（${targetServerPath}），请在挂起更改面板审查后签入`,
+      })
+      await refreshPendingChanges()
+      refreshItems()
+      return true
+    },
+    [refreshItems, refreshLogs, refreshPendingChanges],
+  )
+
+  /**
    * 强制获取确认后执行：覆盖本地并关闭确认弹窗。
    */
   const handleForceGetConfirmed = useCallback(
@@ -431,6 +462,7 @@ export function useFileActions({
     handleConflictsResolved,
     handleForceGetConfirmed,
     handleRenameConfirmed,
+    handleBranchConfirmed,
     runGetVersion,
     runRollback,
   }

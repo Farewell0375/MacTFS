@@ -42,6 +42,7 @@ export type FileActionId =
   | "history"
   | "viewFile"
   | "diffLocalLatest"
+  | "branch"
   | "properties"
 
 // 单个菜单项：是否可用与置灰原因。
@@ -182,6 +183,7 @@ function buildFolderMenu(target: FileTarget): FileMenuItem[][] {
       reason: target.mapped ? undefined : NOT_MAPPED_REASON,
     },
     { id: "history", label: "查看历史", enabled: true },
+    { id: "branch", label: "分支…", enabled: true },
   ])
 
   sections.push(buildAdvancedSection(target))
@@ -301,8 +303,9 @@ function buildFileItemMenu(target: FileTarget): FileMenuItem[][] {
   ]
   sections.push(workspaceActions)
 
-  // pendingAdd 文件服务端尚不存在，不提供属性与获取特定版本。
+  // pendingAdd 文件服务端尚不存在，不提供分支、属性与获取特定版本。
   if (!isPendingAdd) {
+    sections.push([{ id: "branch", label: "分支…", enabled: true }])
     sections.push(buildAdvancedSection(target))
   }
 

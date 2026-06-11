@@ -153,6 +153,7 @@ export function WorkspaceShell({
           onGetVersion={actions.runGetVersion}
           onRenameConfirmed={actions.handleRenameConfirmed}
           onRollback={actions.runRollback}
+          onBranchConfirmed={actions.handleBranchConfirmed}
         />
 
         {manageOpen && (
