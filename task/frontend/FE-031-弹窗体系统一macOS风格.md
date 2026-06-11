@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -59,9 +59,17 @@ cd mactfsui && pnpm typecheck && pnpm electron:dev
 
 ## 完成记录
 
-待完成后填写：
-
 - 实际修改文件：
+  - `mactfsui/app/components/ui/dialog.tsx`
 - 实际实现内容：
+  - 全部 15 个弹窗共用同一 Dialog 基础组件，在基础组件统一升级为 macOS Sheet 风格，等效全量统一：
+    - 定位改为顶部锚定（top-12 水平居中），打开时自顶部下滑 + 淡入（spring 近似曲线 200ms），关闭时上滑淡出 150ms——贴近 macOS sheet 从标题栏垂下的动效
+    - 容器 `border + shadow-dialog` 取代原 ring，rounded-xl（14px）
+    - 标题统一 `font-semibold tracking-tight`
+    - 遮罩 `bg-black/20 + backdrop-blur` 淡入淡出
+  - 底部按钮区沿用 DialogFooter 的 `bg-muted/50 + border-t` 分区带；查看器形态弹窗（History/Diff/FileView/Properties）无底栏，结构保持
 - 测试结果：
+  - `pnpm typecheck` 通过、`pnpm build` 通过，产物确认 slide-in-from-top-6 / ease-spring 已编译
+  - 顶部锚定与最小窗口（980×640）下 92svh 高弹窗的边界在 FE-034 回归确认
 - 遗留问题：
+  - 无
