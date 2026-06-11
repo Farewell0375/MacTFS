@@ -31,14 +31,14 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 33 | 34 | 97% |
+| Frontend | 34 | 34 | 100% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 57 | 67 | 85% |
+| Overall | 58 | 67 | 87% |
 
 ## 当前阶段
 
-UI 风格改版·macOS 原生风方案（分支 `feature/ui-macos-restyle`，FE-026 ~ FE-034，需求见 [docs/mactfs-ui-restyle-requirements.md](/Users/fenghp/Desktop/DEV/project/mydev/docs/mactfs-ui-restyle-requirements.md)；姊妹分支 `feature/ui-modern-restyle` 做 Codex/CC Switch 现代工具风方案，两套并行对比）
+UI 风格改版·macOS 原生风方案完成（分支 `feature/ui-macos-restyle`，FE-026 ~ FE-034 全部 done；姊妹分支 `feature/ui-modern-restyle` 的现代工具风方案也已完成，两套可并行对比体验，截图见 [docs/ui-restyle-screenshots](/Users/fenghp/Desktop/DEV/project/mydev/docs/ui-restyle-screenshots)）
 
 ## 前端规范
 
@@ -46,7 +46,8 @@ UI 风格改版·macOS 原生风方案（分支 `feature/ui-macos-restyle`，FE-
 
 ## 下一步任务
 
-- [FE-034-UI改版回归验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-034-UI改版回归验收.md)
+- 两个 UI 分支对比体验后选定方案
+- [FEATURE-001-连接与目录浏览端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/feature/FEATURE-001-连接与目录浏览端到端验收.md)（需要真实 TFS 环境）
 - UI 改版完成后再回到 [FEATURE-001-连接与目录浏览端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/feature/FEATURE-001-连接与目录浏览端到端验收.md)（需要真实 TFS 环境）
 
 ## Core
@@ -125,7 +126,7 @@ UI 风格改版·macOS 原生风方案（分支 `feature/ui-macos-restyle`，FE-
 | [FE-031-弹窗体系统一macOS风格.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-031-弹窗体系统一macOS风格.md) | done | P1 |
 | [FE-032-操作反馈与微交互.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-032-操作反馈与微交互.md) | done | P1 |
 | [FE-033-明暗主题跟随系统.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-033-明暗主题跟随系统.md) | done | P1 |
-| [FE-034-UI改版回归验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-034-UI改版回归验收.md) | todo | P0 |
+| [FE-034-UI改版回归验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-034-UI改版回归验收.md) | done | P0 |
 
 ## Feature E2E
 

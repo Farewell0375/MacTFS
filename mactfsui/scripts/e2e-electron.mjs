@@ -57,6 +57,18 @@ try {
   record("3 进入工作台（固定上下文）", topbar.includes("PKUSEHR"), topbar.replace(/\n/g, " "))
   await shot(win, "03-workspace")
 
+  // 3.5 明暗主题三态切换（FE-033 回归）：跟随系统 → 亮 → 暗 → 跟随系统
+  const themeButton = win.getByRole("button", { name: /主题：/ })
+  await themeButton.click()
+  await win.waitForTimeout(400)
+  await themeButton.click()
+  await win.waitForTimeout(600)
+  const darkApplied = await win.evaluate(() => document.documentElement.classList.contains("dark"))
+  record("3.5 主题切换到暗色", darkApplied, "")
+  await shot(win, "03b-dark-workspace")
+  await themeButton.click()
+  await win.waitForTimeout(600)
+
   // 4. 逐级展开目录树到指定测试目录（懒加载真实数据）
   const tree = win.locator("aside").first()
   for (const name of TEST_TREE_CHAIN) {

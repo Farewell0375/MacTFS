@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -58,9 +58,24 @@ cd mactfsui && pnpm typecheck && pnpm electron:dev
 
 ## 完成记录
 
-待完成后填写：
-
 - 实际修改文件：
-- 实际实现内容：
+  - 移植 `mactfsui/scripts/e2e-electron.mjs`、`e2e-electron-part2.mjs`、`shot-workspace.mjs`（与现代风分支共用同一套回归脚本）
+  - 新增 `docs/ui-restyle-screenshots/`（macOS 风 6 张关键页面截图）
+- 实际实现内容（验收执行）：
+  - playwright-core 驱动真实 Electron 应用连真实 TFS，两轮共 13 项检查通过：
+    1. 本地服务自动拉起 → macOS 风登录页（毛玻璃品牌区/最近连接/服务指示灯）
+    2. 连接真实 TFS → Collection 卡片选择 → 进入工作台（上下文正确）
+    3. 主题切换 跟随系统→亮→暗 生效（暗色工作台截图存档）
+    4. 目录树懒加载导航至指定测试目录
+    5. 目录历史弹窗（Sheet 式，真实 Changeset 678739）
+    6. 文件查看弹窗（服务器 latest）
+    7. 目录对比（先确认选项再执行流程正常）
+    8. 签出文件 → 挂起更改出现 → 本地 vs latest Monaco Diff → 撤销恢复现场（仅动 ai-smoke 测试文件）
+    9. 操作日志面板记录真实 API 调用（undo /api/files/undo 等）
+  - 接口契约零改动：`app/lib/api` 未触碰（新增 platform.ts / recent-servers.ts 为纯前端工具）
+  - `pnpm typecheck` / `pnpm build` 每任务提交前均通过
 - 测试结果：
+  - 13/14 PASS；1 项 FAIL 为环境因素：「创建/取消映射」跳过（测试目录已被既有 Workspace 映射且含用户真实挂起更改，避免破坏现场）
 - 遗留问题：
+  - 「映射到本地 / 取消映射」建议在干净环境人工补验一次
+  - vibrancy 毛玻璃实际透出效果（截图合成不含窗后模糊）建议真机肉眼确认一次
