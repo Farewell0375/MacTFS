@@ -86,6 +86,28 @@ export async function pathsExist(paths: string[]): Promise<Record<string, boolea
 }
 
 /**
+ * 在访达中打开本地路径（目录直接进入，文件定位选中），非 Electron 环境返回 false。
+ */
+export async function revealPath(targetPath: string, isFolder: boolean): Promise<boolean> {
+  const bridge = getBridge()
+  if (!bridge) {
+    return false
+  }
+  return bridge.revealPath(targetPath, isFolder)
+}
+
+/**
+ * 打开系统文件选择器（多选），非 Electron 环境返回 null。
+ */
+export async function selectFiles(defaultPath?: string): Promise<string[] | null> {
+  const bridge = getBridge()
+  if (!bridge) {
+    return null
+  }
+  return bridge.selectFiles(defaultPath)
+}
+
+/**
  * 构造非 Electron 环境下的占位服务状态。
  */
 function unavailableStatus(): ServiceStatus {

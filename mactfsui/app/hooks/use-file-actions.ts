@@ -3,6 +3,7 @@ import { useCallback, useState } from "react"
 import type { DiffRequest } from "~/components/explorer/diff-dialog"
 import { api } from "~/lib/api"
 import type { MappingInfo } from "~/lib/api"
+import { isElectron, revealPath, selectFiles } from "~/lib/electron"
 import type { FileActionId, FileTarget } from "~/lib/tfs"
 
 // 当前打开的业务弹窗：Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理 / 覆盖类确认 / 属性 / 获取特定版本。
@@ -267,6 +268,57 @@ export function useFileActions({
         case "merge":
           setDialog({ kind: "merge", serverPath: target.serverPath })
           break
+        case "revealInFinder": {
+          if (!target.localPath) {
+            return
+          }
+          if (!isElectron()) {
+            setNotice({ kind: "error", text: "「在访达中打开」仅桌面应用支持" })
+            return
+          }
+          const revealed = await revealPath(target.localPath, target.folder)
+          if (!revealed) {
+            setNotice({ kind: "error", text: "本地路径不存在，请先获取最新" })
+          }
+          break
+        }
+        case "addLocalFiles": {
+          if (!target.localPath) {
+            return
+          }
+          if (!isElectron()) {
+            setNotice({ kind: "error", text: "「添加本地文件」仅桌面应用支持" })
+            return
+          }
+          const selected = await selectFiles(target.localPath)
+          if (!selected || selected.length === 0) {
+            return
+          }
+          // 只允许添加位于该目录本地路径内的文件，越界项跳过并提示。
+          const prefix = `${target.localPath}/`
+          const inside = selected.filter((path) => path.startsWith(prefix))
+          const skipped = selected.length - inside.length
+          if (inside.length === 0) {
+            setNotice({ kind: "error", text: "所选文件不在该目录的本地路径内，已全部跳过" })
+            return
+          }
+          setActionBusy(true)
+          setNotice({ kind: "info", text: "正在添加到版本控制…" })
+          const result = await api.addFiles({ paths: inside, recursive: false })
+          refreshLogs()
+          setActionBusy(false)
+          if (!result.ok || !result.data) {
+            setNotice({ kind: "error", text: result.errorMessage ?? "添加失败" })
+            return
+          }
+          setNotice({
+            kind: skipped > 0 ? "error" : "info",
+            text: `已加入版本控制 ${result.data.result.affected} 项${skipped > 0 ? `，跳过目录外文件 ${skipped} 项` : ""}，签入后服务器生效`,
+          })
+          await refreshPendingChanges()
+          refreshItems()
+          break
+        }
         case "checkout":
           setActionBusy(true)
           setNotice({ kind: "info", text: "正在签出…" })
@@ -330,7 +382,7 @@ export function useFileActions({
           break
       }
     },
-    [onMappingsChanged, runGetLatest, runCheckout, runFileOperation, refreshLogs],
+    [onMappingsChanged, runGetLatest, runCheckout, runFileOperation, refreshLogs, refreshItems, refreshPendingChanges],
   )
 
   /**

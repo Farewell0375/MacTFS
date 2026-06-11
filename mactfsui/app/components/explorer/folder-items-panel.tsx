@@ -117,6 +117,15 @@ export function FolderItemsPanel({
   const currentLocalPath = resolveLocalPath(session.mappings, selectedServerPath)
   const selectedRow = rows.find((row) => row.item.serverPath === selectedItemPath)
 
+  // 中间区域空白处右键的目标：当前目录本身（与目录树右键同一套菜单）。
+  const currentFolderTarget = makeFileTarget({
+    source: "list",
+    folder: true,
+    serverPath: selectedServerPath,
+    mappings: session.mappings,
+    pendingStatus: pendingByServerPath[selectedServerPath] ?? null,
+  })
+
   return (
     <section className="flex h-full min-w-0 flex-1 flex-col bg-background">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b px-3">
@@ -142,6 +151,7 @@ export function FolderItemsPanel({
         </Button>
       </div>
 
+      <FileTargetMenu target={currentFolderTarget} onAction={onFileAction}>
       <div className="min-h-0 flex-1 overflow-auto">
         {loading ? (
           <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -191,7 +201,11 @@ export function FolderItemsPanel({
                     data-state={selected ? "selected" : undefined}
                     className="cursor-default select-none"
                     onClick={() => setSelectedItemPath(row.item.serverPath)}
-                    onContextMenu={() => setSelectedItemPath(row.item.serverPath)}
+                    onContextMenu={(event) => {
+                      // 阻止冒泡到外层「当前目录」菜单，避免双菜单。
+                      event.stopPropagation()
+                      setSelectedItemPath(row.item.serverPath)
+                    }}
                     onDoubleClick={() => {
                       if (row.item.folder) {
                         onNavigate(row.item.serverPath)
@@ -233,6 +247,7 @@ export function FolderItemsPanel({
           </Table>
         )}
       </div>
+      </FileTargetMenu>
 
       <div className="flex h-8 shrink-0 items-center gap-2 border-t px-3 text-xs text-muted-foreground">
         {selectedRow ? (

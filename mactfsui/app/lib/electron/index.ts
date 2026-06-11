@@ -6,6 +6,8 @@ export {
   getToken,
   isElectron,
   pathsExist,
+  revealPath,
   selectDirectory,
+  selectFiles,
   startService,
 } from "./bridge"

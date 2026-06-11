@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron")
+const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron")
 const path = require("node:path")
 const fs = require("node:fs")
 const os = require("node:os")
@@ -246,6 +246,29 @@ function registerIpcHandlers() {
     return result.filePaths[0]
   })
   ipcMain.handle("mactfs:paths-exist", (event, paths) => pathsExist(paths))
+  ipcMain.handle("mactfs:reveal-path", async (event, targetPath, isFolder) => {
+    if (typeof targetPath !== "string" || targetPath.length === 0 || !fs.existsSync(targetPath)) {
+      return false
+    }
+    // 目录直接进入访达中的该目录，文件则在访达中定位并选中。
+    if (isFolder) {
+      const error = await shell.openPath(targetPath)
+      return error === ""
+    }
+    shell.showItemInFolder(targetPath)
+    return true
+  })
+  ipcMain.handle("mactfs:select-files", async (event, defaultPath) => {
+    const options = { properties: ["openFile", "multiSelections"] }
+    if (typeof defaultPath === "string" && defaultPath.length > 0 && fs.existsSync(defaultPath)) {
+      options.defaultPath = defaultPath
+    }
+    const result = await dialog.showOpenDialog(options)
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+    return result.filePaths
+  })
 }
 
 /**

@@ -44,6 +44,8 @@ export type FileActionId =
   | "diffLocalLatest"
   | "branch"
   | "merge"
+  | "revealInFinder"
+  | "addLocalFiles"
   | "properties"
 
 // 单个菜单项：是否可用与置灰原因。
@@ -178,6 +180,21 @@ function buildFolderMenu(target: FileTarget): FileMenuItem[][] {
 
   sections.push([
     {
+      id: "revealInFinder",
+      label: "在访达中打开",
+      enabled: target.mapped,
+      reason: target.mapped ? undefined : NOT_MAPPED_REASON,
+    },
+    {
+      id: "addLocalFiles",
+      label: "添加本地文件…",
+      enabled: target.mapped,
+      reason: target.mapped ? undefined : NOT_MAPPED_REASON,
+    },
+  ])
+
+  sections.push([
+    {
       id: "compare",
       label: "目录对比",
       enabled: target.mapped,
@@ -230,6 +247,12 @@ function buildFileItemMenu(target: FileTarget): FileMenuItem[][] {
     })
     viewActions.push({ id: "history", label: "查看历史", enabled: true })
   }
+  viewActions.push({
+    id: "revealInFinder",
+    label: "在访达中显示",
+    enabled: target.mapped,
+    reason: target.mapped ? undefined : NOT_MAPPED_REASON,
+  })
   sections.push(viewActions)
 
   // Pending Changes 列表项以撤销为主，不再重复签出 / 删除入口。

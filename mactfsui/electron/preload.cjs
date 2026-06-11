@@ -39,4 +39,16 @@ contextBridge.exposeInMainWorld("mactfs", {
   pathsExist(paths) {
     return ipcRenderer.invoke("mactfs:paths-exist", paths)
   },
+  /**
+   * 在访达中打开：目录直接进入，文件定位并选中。
+   */
+  revealPath(targetPath, isFolder) {
+    return ipcRenderer.invoke("mactfs:reveal-path", targetPath, isFolder)
+  },
+  /**
+   * 打开系统文件选择器（多选），返回所选文件路径列表。
+   */
+  selectFiles(defaultPath) {
+    return ipcRenderer.invoke("mactfs:select-files", defaultPath)
+  },
 })
