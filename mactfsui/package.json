@@ -12,7 +12,6 @@
     "format": "prettier --write \"**/*.{ts,tsx}\""
   },
   "dependencies": {
-    "@fontsource-variable/roboto-slab": "^5.2.8",
     "@react-router/node": "7.13.1",
     "@react-router/serve": "7.13.1",
     "class-variance-authority": "^0.7.1",

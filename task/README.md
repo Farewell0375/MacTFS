@@ -31,10 +31,10 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 25 | 34 | 74% |
+| Frontend | 26 | 34 | 76% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 49 | 67 | 73% |
+| Overall | 50 | 67 | 75% |
 
 ## 当前阶段
 
@@ -46,7 +46,7 @@ UI 风格改版·macOS 原生风方案（分支 `feature/ui-macos-restyle`，FE-
 
 ## 下一步任务
 
-- [FE-026-建立macOS设计基建.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-026-建立macOS设计基建.md)
+- [FE-027-Electron窗口macOS化.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-027-Electron窗口macOS化.md)
 - UI 改版完成后再回到 [FEATURE-001-连接与目录浏览端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/feature/FEATURE-001-连接与目录浏览端到端验收.md)（需要真实 TFS 环境）
 
 ## Core
@@ -117,7 +117,7 @@ UI 风格改版·macOS 原生风方案（分支 `feature/ui-macos-restyle`，FE-
 | [FE-023-实现分支.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-023-实现分支.md) | done | P1 |
 | [FE-024-实现合并.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-024-实现合并.md) | done | P1 |
 | [FE-025-实现访达打开与添加本地文件.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-025-实现访达打开与添加本地文件.md) | done | P0 |
-| [FE-026-建立macOS设计基建.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-026-建立macOS设计基建.md) | todo | P0 |
+| [FE-026-建立macOS设计基建.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-026-建立macOS设计基建.md) | done | P0 |
 | [FE-027-Electron窗口macOS化.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-027-Electron窗口macOS化.md) | todo | P0 |
 | [FE-028-重设计登录页.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-028-重设计登录页.md) | todo | P0 |
 | [FE-029-工作台外壳与顶栏改版.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-029-工作台外壳与顶栏改版.md) | todo | P0 |

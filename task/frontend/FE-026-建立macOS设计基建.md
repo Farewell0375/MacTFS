@@ -2,7 +2,7 @@
 
 ## 状态
 
-todo
+done
 
 ## 优先级
 
@@ -58,9 +58,17 @@ cd mactfsui && pnpm typecheck && pnpm electron:dev
 
 ## 完成记录
 
-待完成后填写：
-
 - 实际修改文件：
+  - `mactfsui/app/app.css`
+  - `mactfsui/package.json`、`mactfsui/pnpm-lock.yaml`（移除 `@fontsource-variable/roboto-slab`）
 - 实际实现内容：
+  - 全局字体切换为系统字体栈（SF Pro / PingFang SC 优先），`html` 改 `font-sans`；新增 `--font-mono` 等宽令牌
+  - 主色改为 macOS 系统蓝（light ≈ #007AFF、dark ≈ #0A84FF），`--accent` 与主色解耦改中性悬停色
+  - 中性灰分级 light/dark 两套完整定义（dark 深灰非纯黑）
+  - 半透明材质变量：`--sidebar` / `--sidebar-accent` 带透明度，配套 `html.vibrancy` 时页面底透明（供 FE-027 毛玻璃透出），vibrancy 未开启时半透明叠在实色上近似实色、可安全回退
+  - 圆角基准 0.875rem → 0.625rem（6/8/10/14px 档位）；阴影分层 card/overlay/dialog；动效令牌 150/220/320ms + ease-out-quart / spring
 - 测试结果：
+  - `pnpm typecheck` 通过、`pnpm build` 通过
+  - 视觉走查随 FE-027 ~ FE-034 进行
 - 遗留问题：
+  - 无
