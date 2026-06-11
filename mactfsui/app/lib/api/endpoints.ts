@@ -13,6 +13,7 @@ import type {
   FolderDiffItem,
   GetLatestResult,
   HistoryEntry,
+  ItemInfo,
   MappingInfo,
   OperationLogEntry,
   PendingChange,
@@ -171,6 +172,13 @@ export function getPendingChanges(params: { serverPath?: string } = {}) {
  */
 export function checkin(body: { paths?: string[]; comment: string }) {
   return apiClient.post<{ checkin: CheckinResult }>("/api/checkin", { body })
+}
+
+/**
+ * 读取服务端对象（文件或目录）的属性信息，供属性弹窗展示。
+ */
+export function getItemInfo(params: { serverPath: string }) {
+  return apiClient.get<{ item: ItemInfo }>("/api/items/info", { query: params })
 }
 
 /**

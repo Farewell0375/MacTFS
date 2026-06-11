@@ -3,8 +3,10 @@ import { CompareDialog } from "~/components/explorer/compare-dialog"
 import { ConflictDialog } from "~/components/explorer/conflict-dialog"
 import { DiffDialog } from "~/components/explorer/diff-dialog"
 import { FileViewDialog } from "~/components/explorer/file-view-dialog"
+import { GetVersionDialog } from "~/components/explorer/get-version-dialog"
 import { HistoryDialog } from "~/components/explorer/history-dialog"
 import { MappingDialog } from "~/components/explorer/mapping-dialog"
+import { PropertiesDialog } from "~/components/explorer/properties-dialog"
 import type { WorkspaceDialogState } from "~/hooks/use-file-actions"
 import type { MappingInfo } from "~/lib/api"
 import type { FileActionId, FileTarget } from "~/lib/tfs"
@@ -87,6 +89,17 @@ export function WorkspaceDialogs({
           serverPath={dialog.serverPath}
           onClose={onClose}
           onResolved={onConflictsResolved}
+        />
+      )
+    case "properties":
+      return <PropertiesDialog target={dialog.target} onClose={onClose} />
+    case "getVersion":
+      return (
+        <GetVersionDialog
+          serverPath={dialog.serverPath}
+          folder={dialog.folder}
+          onConfirm={(changeset) => onGetVersion(dialog.serverPath, changeset, dialog.folder)}
+          onClose={onClose}
         />
       )
     case "confirmForceGet":

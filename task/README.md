@@ -31,10 +31,10 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 18 | 24 | 75% |
+| Frontend | 19 | 24 | 79% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 42 | 57 | 74% |
+| Overall | 43 | 57 | 75% |
 
 ## 当前阶段
 
@@ -48,7 +48,7 @@ blocked
 
 ## 下一步任务
 
-- [FE-019-实现对象属性与获取特定版本.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-019-实现对象属性与获取特定版本.md)
+- [FE-020-实现重命名.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-020-实现重命名.md)
 - [FEATURE-001-连接与目录浏览端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/feature/FEATURE-001-连接与目录浏览端到端验收.md)（需要真实 TFS 环境）
 
 ## Core
@@ -112,7 +112,7 @@ blocked
 | [FE-016-优化Diff与历史弹窗体验.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-016-优化Diff与历史弹窗体验.md) | done | P1 |
 | [FE-017-实现工作台手动刷新.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-017-实现工作台手动刷新.md) | done | P1 |
 | [FE-018-Diff弹窗替换为MonacoDiffEditor.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-018-Diff弹窗替换为MonacoDiffEditor.md) | done | P1 |
-| [FE-019-实现对象属性与获取特定版本.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-019-实现对象属性与获取特定版本.md) | todo | P0 |
+| [FE-019-实现对象属性与获取特定版本.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-019-实现对象属性与获取特定版本.md) | done | P0 |
 | [FE-020-实现重命名.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-020-实现重命名.md) | todo | P0 |
 | [FE-021-实现变更集回滚.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-021-实现变更集回滚.md) | todo | P1 |
 | [FE-022-实现工作区与Mapping集中管理.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-022-实现工作区与Mapping集中管理.md) | todo | P1 |

@@ -15,6 +15,7 @@ export type {
   FolderDiffItem,
   GetLatestResult,
   HistoryEntry,
+  ItemInfo,
   MappingConfig,
   MappingInfo,
   OperationLogEntry,

@@ -32,6 +32,7 @@ export type FileActionId =
   | "unmap"
   | "getLatest"
   | "forceGetLatest"
+  | "getSpecificVersion"
   | "checkout"
   | "delete"
   | "undo"
@@ -40,6 +41,7 @@ export type FileActionId =
   | "history"
   | "viewFile"
   | "diffLocalLatest"
+  | "properties"
 
 // 单个菜单项：是否可用与置灰原因。
 export interface FileMenuItem {
@@ -175,7 +177,25 @@ function buildFolderMenu(target: FileTarget): FileMenuItem[][] {
     { id: "history", label: "查看历史", enabled: true },
   ])
 
+  sections.push(buildAdvancedSection(target))
+
   return sections
+}
+
+/**
+ * 高级动作分组：获取特定版本（按 changeset 覆盖本地）与属性弹窗。
+ */
+function buildAdvancedSection(target: FileTarget): FileMenuItem[] {
+  return [
+    {
+      id: "getSpecificVersion",
+      label: "获取特定版本…",
+      enabled: target.mapped,
+      danger: true,
+      reason: target.mapped ? undefined : NOT_MAPPED_REASON,
+    },
+    { id: "properties", label: "属性…", enabled: true },
+  ]
 }
 
 /**
@@ -206,6 +226,10 @@ function buildFileItemMenu(target: FileTarget): FileMenuItem[][] {
     sections.push([
       { id: "undo", label: "撤销更改", enabled: true, danger: true },
     ])
+    // pendingAdd 项服务端尚不存在，属性查询无意义。
+    if (!isPendingAdd) {
+      sections.push([{ id: "properties", label: "属性…", enabled: true }])
+    }
     return sections
   }
 
@@ -255,6 +279,11 @@ function buildFileItemMenu(target: FileTarget): FileMenuItem[][] {
     },
   ]
   sections.push(workspaceActions)
+
+  // pendingAdd 文件服务端尚不存在，不提供属性与获取特定版本。
+  if (!isPendingAdd) {
+    sections.push(buildAdvancedSection(target))
+  }
 
   return sections
 }

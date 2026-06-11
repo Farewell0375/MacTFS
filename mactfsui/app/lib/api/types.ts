@@ -159,6 +159,20 @@ export interface HistoryEntry {
   comment: string
 }
 
+// 服务端对象属性信息，对应 core TfsItemInfo（属性弹窗用）。
+export interface ItemInfo {
+  serverPath: string
+  folder: boolean
+  changeset: number
+  checkinDate: number | null
+  author: string
+  comment: string
+  /** 文件大小（字节），目录为 null。 */
+  size: number | null
+  /** 文件编码名称，目录为 null。 */
+  encoding: string | null
+}
+
 // 文件内容，对应 core TfsFileContent，binary / tooLarge 时 content 为空串。
 export interface FileContent {
   serverPath: string

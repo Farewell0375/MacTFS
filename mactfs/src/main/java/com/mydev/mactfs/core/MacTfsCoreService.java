@@ -585,6 +585,68 @@ public class MacTfsCoreService {
     }
 
     /**
+     * 查询单个服务端对象（文件或目录）的属性信息：最新版本、签入时间与签入人，文件附带大小与编码。
+     * 签入人与备注来自最近一条历史记录（Item 本身不携带提交人信息）。
+     */
+    public CoreOperationResult<TfsItemInfo> getItemInfo(final TfsConnectionConfig config,
+                                                        final String collectionName,
+                                                        final String serverPath) {
+        return execute("getItemInfo", new CoreCallable<TfsItemInfo>() {
+            @Override
+            public TfsItemInfo call(List<String> logs) throws Exception {
+                CoreConnection connection = connectCollection(config, collectionName);
+                Item item = connection.versionControlClient.getItem(
+                    require(serverPath, "serverPath"),
+                    LatestVersionSpec.INSTANCE,
+                    DeletedState.NON_DELETED,
+                    GetItemsOptions.NONE
+                );
+                boolean folder = isFolder(item.getItemType());
+                int changeset = item.getChangeSetID();
+                Long checkinDate = item.getCheckinDate() == null ? null : Long.valueOf(item.getCheckinDate().getTimeInMillis());
+                String author = "";
+                String comment = "";
+                Changeset[] changesets = connection.versionControlClient.queryHistory(
+                    item.getServerItem(),
+                    LatestVersionSpec.INSTANCE,
+                    0,
+                    folder ? RecursionType.FULL : RecursionType.NONE,
+                    null,
+                    null,
+                    null,
+                    1,
+                    false,
+                    true,
+                    false,
+                    false
+                );
+                if (changesets != null && changesets.length > 0 && changesets[0] != null) {
+                    Changeset latest = changesets[0];
+                    author = emptyToDefault(latest.getOwnerDisplayName(), latest.getOwner());
+                    comment = latest.getComment() == null ? "" : latest.getComment();
+                    // 目录的最新变动以子树最近一次签入为准（Item 自身的 changeset 不含子项变动）。
+                    changeset = latest.getChangesetID();
+                    if (latest.getDate() != null) {
+                        checkinDate = Long.valueOf(latest.getDate().getTimeInMillis());
+                    }
+                }
+                TfsItemInfo info = new TfsItemInfo(
+                    item.getServerItem(),
+                    folder,
+                    changeset,
+                    checkinDate,
+                    author,
+                    comment,
+                    folder ? null : Long.valueOf(item.getContentLength()),
+                    folder || item.getEncoding() == null ? null : item.getEncoding().getName()
+                );
+                logs.add("Item info loaded: " + item.getServerItem());
+                return info;
+            }
+        });
+    }
+
+    /**
      * 生成本地文件和服务器 latest 的文本 diff。
      */
     public CoreOperationResult<TfsTextDiff> diffLocalLatest(final TfsConnectionConfig config,
@@ -1899,6 +1961,61 @@ public class MacTfsCoreService {
 
         public boolean isTooLarge() {
             return tooLarge;
+        }
+    }
+
+    public static class TfsItemInfo {
+        private final String serverPath;
+        private final boolean folder;
+        private final int changeset;
+        private final Long checkinDate;
+        private final String author;
+        private final String comment;
+        private final Long size;
+        private final String encoding;
+
+        public TfsItemInfo(String serverPath, boolean folder, int changeset, Long checkinDate,
+                           String author, String comment, Long size, String encoding) {
+            this.serverPath = serverPath;
+            this.folder = folder;
+            this.changeset = changeset;
+            this.checkinDate = checkinDate;
+            this.author = author;
+            this.comment = comment;
+            this.size = size;
+            this.encoding = encoding;
+        }
+
+        public String getServerPath() {
+            return serverPath;
+        }
+
+        public boolean isFolder() {
+            return folder;
+        }
+
+        public int getChangeset() {
+            return changeset;
+        }
+
+        public Long getCheckinDate() {
+            return checkinDate;
+        }
+
+        public String getAuthor() {
+            return author;
+        }
+
+        public String getComment() {
+            return comment;
+        }
+
+        public Long getSize() {
+            return size;
+        }
+
+        public String getEncoding() {
+            return encoding;
         }
     }
 

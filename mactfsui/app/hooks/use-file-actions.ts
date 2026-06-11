@@ -5,7 +5,7 @@ import { api } from "~/lib/api"
 import type { MappingInfo } from "~/lib/api"
 import type { FileActionId, FileTarget } from "~/lib/tfs"
 
-// 当前打开的业务弹窗：Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理 / 覆盖类确认。
+// 当前打开的业务弹窗：Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理 / 覆盖类确认 / 属性 / 获取特定版本。
 export type WorkspaceDialogState =
   | { kind: "mapping"; serverPath: string }
   | { kind: "history"; serverPath: string; folder: boolean }
@@ -14,6 +14,8 @@ export type WorkspaceDialogState =
   | { kind: "diff"; request: DiffRequest }
   | { kind: "conflicts"; serverPath: string }
   | { kind: "confirmForceGet"; serverPath: string; folder: boolean }
+  | { kind: "properties"; target: FileTarget }
+  | { kind: "getVersion"; serverPath: string; folder: boolean }
   | null
 
 // 顶部细条通知：信息（操作摘要）或错误。
@@ -199,6 +201,17 @@ export function useFileActions({
             serverPath: target.serverPath,
             folder: target.folder,
           })
+          break
+        case "getSpecificVersion":
+          // 覆盖类危险操作：弹窗内选择 changeset 并确认后执行。
+          setDialog({
+            kind: "getVersion",
+            serverPath: target.serverPath,
+            folder: target.folder,
+          })
+          break
+        case "properties":
+          setDialog({ kind: "properties", target })
           break
         case "checkout":
           setActionBusy(true)
