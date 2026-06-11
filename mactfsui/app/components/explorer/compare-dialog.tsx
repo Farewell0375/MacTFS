@@ -30,6 +30,9 @@ import { cn } from "~/lib/utils"
  * 目录对比弹窗：对已映射目录执行本地与服务端对比，
  * 默认隐藏 upToDate，支持状态筛选、刷新重比，结果项走统一右键菜单。
  */
+// 在对比弹窗内直接执行、完成后需要刷新对比结果的动作。
+const ACTIONS_NEED_RECOMPARE: FileActionId[] = ["checkout", "getLatest", "undo", "delete", "add"]
+
 export function CompareDialog({
   serverPath,
   mappings,
@@ -39,12 +42,14 @@ export function CompareDialog({
   serverPath: string
   mappings: MappingInfo[]
   onClose: () => void
-  onFileAction: (target: FileTarget, action: FileActionId) => void
+  onFileAction: (target: FileTarget, action: FileActionId) => void | Promise<void>
 }) {
   const [diffs, setDiffs] = useState<FolderDiffItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showUpToDate, setShowUpToDate] = useState(false)
+  // 忽略仅服务器存在的项（服务器有但本地没有），勾选后不计入差异。
+  const [hideServerOnly, setHideServerOnly] = useState(false)
   // 状态筛选：空集合表示不过滤（除 upToDate 开关外）。
   const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set())
 
@@ -67,6 +72,20 @@ export function CompareDialog({
     void runCompare()
   }, [runCompare])
 
+  /**
+   * 转发右键动作：签出 / 获取 / 撤销等就地执行的动作完成后自动重新对比，
+   * 让结果状态（如 签出编辑）立即反映最新事实。
+   */
+  const handleAction = useCallback(
+    async (target: FileTarget, action: FileActionId) => {
+      await onFileAction(target, action)
+      if (ACTIONS_NEED_RECOMPARE.includes(action)) {
+        await runCompare()
+      }
+    },
+    [onFileAction, runCompare],
+  )
+
   // 结果中出现过的状态（不含 upToDate），用于生成筛选 chips。
   const presentStatuses = useMemo(() => {
     const set = new Set<string>()
@@ -81,12 +100,15 @@ export function CompareDialog({
   const visibleDiffs = useMemo(
     () =>
       diffs.filter((diff) => {
+        if (hideServerOnly && (diff.status === "notDownloaded" || diff.status === "remoteOnly")) {
+          return false
+        }
         if (diff.status === "upToDate") {
           return showUpToDate && statusFilter.size === 0
         }
         return statusFilter.size === 0 || statusFilter.has(diff.status)
       }),
-    [diffs, showUpToDate, statusFilter],
+    [diffs, showUpToDate, hideServerOnly, statusFilter],
   )
 
   /**
@@ -127,7 +149,17 @@ export function CompareDialog({
               </Badge>
             </button>
           ))}
-          <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+          <label
+            className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground"
+            title="勾选后：服务器有但本地没有的文件（未下载）不计入差异"
+          >
+            <Checkbox
+              checked={hideServerOnly}
+              onCheckedChange={(value) => setHideServerOnly(value === true)}
+            />
+            忽略仅服务器存在的项
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Checkbox
               checked={showUpToDate}
               onCheckedChange={(value) => setShowUpToDate(value === true)}
@@ -181,7 +213,11 @@ export function CompareDialog({
                     compareStatus: diff.status,
                   })
                   return (
-                    <FileTargetMenu key={diff.serverPath} target={target} onAction={onFileAction}>
+                    <FileTargetMenu
+                      key={diff.serverPath}
+                      target={target}
+                      onAction={(menuTarget, action) => void handleAction(menuTarget, action)}
+                    >
                       <TableRow className="cursor-default select-none">
                         <TableCell className="py-1.5">
                           <span className="flex items-center gap-1.5">
