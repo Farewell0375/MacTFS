@@ -129,7 +129,9 @@ export function SourceTreePanel({
   return (
     <aside className="flex h-full w-[280px] shrink-0 flex-col border-r bg-sidebar">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b px-3">
-        <span className="text-xs font-medium text-muted-foreground">源码目录</span>
+        <span className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+          源码目录
+        </span>
         <span className="ml-auto max-w-28 truncate text-xs text-muted-foreground">{collection}</span>
         <Button
           variant="ghost"

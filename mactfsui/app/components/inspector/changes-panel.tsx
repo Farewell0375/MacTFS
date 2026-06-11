@@ -66,9 +66,11 @@ export function ChangesPanel({
   }, [onCheckin, included, comment])
 
   return (
-    <aside className="flex h-full w-[340px] shrink-0 flex-col border-l bg-sidebar">
+    <aside className="flex h-full w-[340px] shrink-0 flex-col border-l bg-background">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b px-3">
-        <span className="text-xs font-medium text-muted-foreground">挂起更改</span>
+        <span className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+          挂起更改
+        </span>
         {pendingChanges.length > 0 && (
           <span className="ml-auto text-xs text-muted-foreground">{pendingChanges.length} 项</span>
         )}

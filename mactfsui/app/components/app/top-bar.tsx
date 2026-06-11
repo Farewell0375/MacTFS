@@ -1,4 +1,4 @@
-import { PanelBottom, PanelLeft, PanelRight } from "lucide-react"
+import { FolderCog, PanelBottom, PanelLeft, PanelRight, Unplug } from "lucide-react"
 
 import { Button } from "~/components/ui/button"
 import { Separator } from "~/components/ui/separator"
@@ -36,7 +36,7 @@ export function TopBar({
   return (
     <header
       className={cn(
-        "app-drag flex h-12 shrink-0 items-center justify-between gap-3 border-b bg-background px-3",
+        "app-drag flex h-12 shrink-0 items-center justify-between gap-3 border-b px-3",
         macInset && "pl-20",
       )}
     >
@@ -80,12 +80,22 @@ export function TopBar({
           <PanelBottom />
         </PanelToggle>
         <Separator orientation="vertical" className="mx-1 h-4!" />
-        <Button size="sm" variant="outline" onClick={onManageWorkspace}>
-          工作区
-        </Button>
-        <Button size="sm" variant="outline" onClick={onReconnect}>
-          重新连接
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button size="icon-sm" variant="ghost" onClick={onManageWorkspace} aria-label="工作区与映射管理">
+              <FolderCog />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">工作区与映射管理</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button size="icon-sm" variant="ghost" onClick={onReconnect} aria-label="重新连接">
+              <Unplug />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">重新连接</TooltipContent>
+        </Tooltip>
       </div>
     </header>
   )

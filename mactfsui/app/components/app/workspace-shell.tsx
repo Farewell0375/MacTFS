@@ -73,7 +73,8 @@ export function WorkspaceShell({
 
   return (
     <TooltipProvider>
-      <div className="flex h-svh flex-col overflow-hidden bg-background">
+      {/* Finder 式布局：根容器不铺底色，vibrancy 下毛玻璃从顶栏与左侧栏透出 */}
+      <div className="flex h-svh flex-col overflow-hidden">
         <TopBar
           session={session}
           panels={panels}
@@ -99,7 +100,13 @@ export function WorkspaceShell({
         )}
 
         <div className="flex min-h-0 flex-1">
-          {panels.tree && (
+          {/* 左右面板保持挂载，通过宽度过渡实现折叠 / 展开动画 */}
+          <div
+            className={cn(
+              "flex min-h-0 shrink-0 overflow-hidden transition-[width] duration-250 ease-out-quart",
+              panels.tree ? "w-[280px]" : "w-0",
+            )}
+          >
             <SourceTreePanel
               collection={session.collection}
               mappings={session.mappings}
@@ -107,7 +114,7 @@ export function WorkspaceShell({
               onNavigate={onNavigate}
               onFileAction={actions.handleFileAction}
             />
-          )}
+          </div>
           <FolderItemsPanel
             session={session}
             selectedServerPath={selectedServerPath}
@@ -117,7 +124,12 @@ export function WorkspaceShell({
             onFileAction={actions.handleFileAction}
             onRefresh={refreshItems}
           />
-          {panels.changes && (
+          <div
+            className={cn(
+              "flex min-h-0 shrink-0 justify-end overflow-hidden transition-[width] duration-250 ease-out-quart",
+              panels.changes ? "w-[340px]" : "w-0",
+            )}
+          >
             <ChangesPanel
               mappings={session.mappings}
               pendingChanges={pending.pendingChanges}
@@ -130,16 +142,22 @@ export function WorkspaceShell({
               onFileAction={actions.handleFileAction}
               onRefresh={() => void pending.refresh()}
             />
-          )}
+          </div>
         </div>
 
-        {panels.console && (
+        {/* 底部操作台通过高度过渡实现滑入滑出 */}
+        <div
+          className={cn(
+            "shrink-0 overflow-hidden transition-[height] duration-250 ease-out-quart",
+            panels.console ? "h-[180px]" : "h-0",
+          )}
+        >
           <ConsolePanel
             refreshToken={logsRefreshToken}
             busy={actions.actionBusy || actions.checkinBusy}
             busyText={actions.notice?.kind === "info" ? actions.notice.text : null}
           />
-        )}
+        </div>
 
         <WorkspaceDialogs
           dialog={actions.dialog}

@@ -60,9 +60,11 @@ export function ConsolePanel({
   )
 
   return (
-    <footer className="flex h-[180px] shrink-0 flex-col border-t bg-background">
+    <footer className="flex h-full flex-col border-t bg-background">
       <div className="flex h-8 shrink-0 items-center gap-2 border-b px-3">
-        <span className="text-xs font-medium text-muted-foreground">操作日志</span>
+        <span className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+          操作日志
+        </span>
         {busy && (
           <span className="flex items-center gap-1.5 text-xs text-primary">
             <Loader2 className="size-3 animate-spin" />

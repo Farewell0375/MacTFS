@@ -31,10 +31,10 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 28 | 34 | 82% |
+| Frontend | 29 | 34 | 85% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 52 | 67 | 78% |
+| Overall | 53 | 67 | 79% |
 
 ## 当前阶段
 
@@ -46,7 +46,7 @@ UI 风格改版·macOS 原生风方案（分支 `feature/ui-macos-restyle`，FE-
 
 ## 下一步任务
 
-- [FE-029-工作台外壳与顶栏改版.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-029-工作台外壳与顶栏改版.md)
+- [FE-030-目录树与文件列表精致化.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-030-目录树与文件列表精致化.md)
 - UI 改版完成后再回到 [FEATURE-001-连接与目录浏览端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/feature/FEATURE-001-连接与目录浏览端到端验收.md)（需要真实 TFS 环境）
 
 ## Core
@@ -120,7 +120,7 @@ UI 风格改版·macOS 原生风方案（分支 `feature/ui-macos-restyle`，FE-
 | [FE-026-建立macOS设计基建.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-026-建立macOS设计基建.md) | done | P0 |
 | [FE-027-Electron窗口macOS化.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-027-Electron窗口macOS化.md) | done | P0 |
 | [FE-028-重设计登录页.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-028-重设计登录页.md) | done | P0 |
-| [FE-029-工作台外壳与顶栏改版.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-029-工作台外壳与顶栏改版.md) | todo | P0 |
+| [FE-029-工作台外壳与顶栏改版.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-029-工作台外壳与顶栏改版.md) | done | P0 |
 | [FE-030-目录树与文件列表精致化.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-030-目录树与文件列表精致化.md) | todo | P0 |
 | [FE-031-弹窗体系统一macOS风格.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-031-弹窗体系统一macOS风格.md) | todo | P1 |
 | [FE-032-操作反馈与微交互.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-032-操作反馈与微交互.md) | todo | P1 |
