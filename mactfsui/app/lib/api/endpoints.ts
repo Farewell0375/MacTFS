@@ -161,6 +161,13 @@ export function undoFiles(body: FileActionBody) {
 }
 
 /**
+ * 重命名文件或目录（同目录改名），产生 rename 挂起更改。
+ */
+export function renameFile(body: { serverPath: string; newName: string }) {
+  return apiClient.post<{ result: FileOperationResult }>("/api/files/rename", { body })
+}
+
+/**
  * 读取当前 Workspace 的挂起更改。
  */
 export function getPendingChanges(params: { serverPath?: string } = {}) {

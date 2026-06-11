@@ -147,6 +147,7 @@ export function WorkspaceShell({
           onConflictsResolved={actions.handleConflictsResolved}
           onForceGetConfirmed={actions.handleForceGetConfirmed}
           onGetVersion={actions.runGetVersion}
+          onRenameConfirmed={actions.handleRenameConfirmed}
         />
       </div>
     </TooltipProvider>

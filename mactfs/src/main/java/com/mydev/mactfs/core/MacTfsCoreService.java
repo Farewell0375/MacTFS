@@ -394,6 +394,35 @@ public class MacTfsCoreService {
     }
 
     /**
+     * 重命名已映射的文件或目录（同目录改名）：产生 rename 挂起更改，签入后服务器生效。
+     */
+    public CoreOperationResult<TfsFileOperationResult> rename(final TfsConnectionConfig config,
+                                                              final String collectionName,
+                                                              final String workspaceName,
+                                                              final String serverPath,
+                                                              final String newName) {
+        return execute("rename", new CoreCallable<TfsFileOperationResult>() {
+            @Override
+            public TfsFileOperationResult call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                String oldPath = normalizeServerPath(require(serverPath, "serverPath"));
+                String name = require(newName, "newName").trim();
+                if (name.contains("/") || name.contains("\\")) {
+                    throw new IllegalArgumentException("Invalid new name: " + newName);
+                }
+                int slash = oldPath.lastIndexOf('/');
+                String newPath = oldPath.substring(0, slash + 1) + name;
+                if (newPath.equals(oldPath)) {
+                    throw new IllegalArgumentException("New name is same as current name");
+                }
+                int affected = workspace.pendRename(oldPath, newPath, LockLevel.NONE, GetOptions.NONE, true, PendChangesOptions.NONE);
+                logs.add("Rename pended: " + oldPath + " -> " + newPath);
+                return new TfsFileOperationResult("rename", affected, Collections.<String>emptyList());
+            }
+        });
+    }
+
+    /**
      * 按选中的 pending changes 执行 checkin，comment 为空时直接拒绝。
      */
     public CoreOperationResult<TfsCheckinResult> checkin(final TfsConnectionConfig config,
@@ -1168,7 +1197,9 @@ public class MacTfsCoreService {
                 isFolder(change.getItemType()),
                 toPendingStatus(change),
                 change.getChangeType() == null ? "" : change.getChangeType().toUIString(false),
-                change.getVersion()
+                change.getVersion(),
+                // rename 挂起更改携带原路径，供 UI 展示「旧名 → 新名」。
+                change.isRename() ? change.getSourceServerItem() : null
             ));
         }
         return result;
@@ -1738,8 +1769,9 @@ public class MacTfsCoreService {
         private final String status;
         private final String changeType;
         private final int version;
+        private final String sourceServerPath;
 
-        public TfsPendingChangeInfo(String serverPath, String localPath, String name, boolean folder, String status, String changeType, int version) {
+        public TfsPendingChangeInfo(String serverPath, String localPath, String name, boolean folder, String status, String changeType, int version, String sourceServerPath) {
             this.serverPath = serverPath;
             this.localPath = localPath;
             this.name = name;
@@ -1747,6 +1779,7 @@ public class MacTfsCoreService {
             this.status = status;
             this.changeType = changeType;
             this.version = version;
+            this.sourceServerPath = sourceServerPath;
         }
 
         public String getServerPath() {
@@ -1775,6 +1808,10 @@ public class MacTfsCoreService {
 
         public int getVersion() {
             return version;
+        }
+
+        public String getSourceServerPath() {
+            return sourceServerPath;
         }
     }
 

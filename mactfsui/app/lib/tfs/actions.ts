@@ -34,6 +34,7 @@ export type FileActionId =
   | "forceGetLatest"
   | "getSpecificVersion"
   | "checkout"
+  | "rename"
   | "delete"
   | "undo"
   | "add"
@@ -137,6 +138,12 @@ function buildFolderMenu(target: FileTarget): FileMenuItem[][] {
     {
       id: "checkout",
       label: "签出编辑",
+      enabled: target.mapped,
+      reason: target.mapped ? undefined : NOT_MAPPED_REASON,
+    },
+    {
+      id: "rename",
+      label: "重命名…",
       enabled: target.mapped,
       reason: target.mapped ? undefined : NOT_MAPPED_REASON,
     },
@@ -259,6 +266,20 @@ function buildFileItemMenu(target: FileTarget): FileMenuItem[][] {
           : pending != null
             ? "存在挂起更改"
             : undefined,
+    },
+    {
+      id: "rename",
+      label: "重命名…",
+      enabled: target.mapped && pending !== "pendingAdd" && pending !== "pendingDelete" && pending !== "pendingRename",
+      reason: !target.mapped
+        ? NOT_MAPPED_REASON
+        : pending === "pendingAdd"
+          ? "挂起新增，签入后才能重命名"
+          : pending === "pendingDelete"
+            ? "已挂起删除"
+            : pending === "pendingRename"
+              ? "已挂起重命名"
+              : undefined,
     },
     {
       id: "delete",

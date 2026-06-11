@@ -128,6 +128,8 @@ export interface PendingChange {
   status: string
   changeType: string
   version: number
+  /** rename 挂起更改的原服务端路径，其余为 null。 */
+  sourceServerPath: string | null
 }
 
 // 签入结果，对应 core TfsCheckinResult。

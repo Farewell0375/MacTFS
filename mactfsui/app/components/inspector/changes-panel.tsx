@@ -235,7 +235,11 @@ function PendingRow({
           <FileText className="size-3.5 shrink-0 text-muted-foreground" />
         )}
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm">{change.name}</span>
+          <span className="block truncate text-sm">
+            {change.status === "pendingRename" && change.sourceServerPath
+              ? `${change.sourceServerPath.slice(change.sourceServerPath.lastIndexOf("/") + 1)} → ${change.name}`
+              : change.name}
+          </span>
           <span className="block truncate font-mono text-[10px] leading-3 text-muted-foreground">
             {change.serverPath}
           </span>

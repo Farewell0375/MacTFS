@@ -447,6 +447,18 @@ public class MacTfsServer {
             }
         }));
 
+        Spark.post("/api/files/rename", (request, response) -> handle(request, response, "rename", TIMEOUT_DEFAULT_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                CoreOperationResult<TfsFileOperationResult> result = coreService.rename(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "serverPath"), "serverPath"), require(stringValue(body, "newName"), "newName"));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("result", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
         Spark.get("/api/files/content", (request, response) -> handle(request, response, "fileContent", TIMEOUT_DIFF_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {

@@ -7,6 +7,7 @@ import { GetVersionDialog } from "~/components/explorer/get-version-dialog"
 import { HistoryDialog } from "~/components/explorer/history-dialog"
 import { MappingDialog } from "~/components/explorer/mapping-dialog"
 import { PropertiesDialog } from "~/components/explorer/properties-dialog"
+import { RenameDialog } from "~/components/explorer/rename-dialog"
 import type { WorkspaceDialogState } from "~/hooks/use-file-actions"
 import type { MappingInfo } from "~/lib/api"
 import type { FileActionId, FileTarget } from "~/lib/tfs"
@@ -25,6 +26,7 @@ export function WorkspaceDialogs({
   onConflictsResolved,
   onForceGetConfirmed,
   onGetVersion,
+  onRenameConfirmed,
 }: {
   dialog: WorkspaceDialogState
   mappings: MappingInfo[]
@@ -35,6 +37,7 @@ export function WorkspaceDialogs({
   onConflictsResolved: () => void
   onForceGetConfirmed: (serverPath: string, folder: boolean) => Promise<void>
   onGetVersion: (serverPath: string, changeset: number, folder: boolean) => Promise<boolean>
+  onRenameConfirmed: (serverPath: string, newName: string) => Promise<boolean>
 }) {
   if (!dialog) {
     return null
@@ -93,6 +96,15 @@ export function WorkspaceDialogs({
       )
     case "properties":
       return <PropertiesDialog target={dialog.target} onClose={onClose} />
+    case "rename":
+      return (
+        <RenameDialog
+          serverPath={dialog.serverPath}
+          folder={dialog.folder}
+          onConfirm={(newName) => onRenameConfirmed(dialog.serverPath, newName)}
+          onClose={onClose}
+        />
+      )
     case "getVersion":
       return (
         <GetVersionDialog

@@ -16,6 +16,7 @@ export type WorkspaceDialogState =
   | { kind: "confirmForceGet"; serverPath: string; folder: boolean }
   | { kind: "properties"; target: FileTarget }
   | { kind: "getVersion"; serverPath: string; folder: boolean }
+  | { kind: "rename"; serverPath: string; folder: boolean }
   | null
 
 // 顶部细条通知：信息（操作摘要）或错误。
@@ -213,6 +214,9 @@ export function useFileActions({
         case "properties":
           setDialog({ kind: "properties", target })
           break
+        case "rename":
+          setDialog({ kind: "rename", serverPath: target.serverPath, folder: target.folder })
+          break
         case "checkout":
           setActionBusy(true)
           setNotice({ kind: "info", text: "正在签出…" })
@@ -329,6 +333,29 @@ export function useFileActions({
   }, [refreshItems, refreshPendingChanges, refreshLogs])
 
   /**
+   * 重命名确认后执行：产生 rename 挂起更改并刷新目录列表与挂起更改。
+   */
+  const handleRenameConfirmed = useCallback(
+    async (serverPath: string, newName: string): Promise<boolean> => {
+      setNotice({ kind: "info", text: "正在重命名…" })
+      const result = await api.renameFile({ serverPath, newName })
+      refreshLogs()
+      if (!result.ok || !result.data) {
+        setNotice({ kind: "error", text: result.errorMessage ?? "重命名失败" })
+        return false
+      }
+      setNotice({
+        kind: "info",
+        text: `已挂起重命名为「${newName}」，签入后服务器生效`,
+      })
+      await refreshPendingChanges()
+      refreshItems()
+      return true
+    },
+    [refreshItems, refreshLogs, refreshPendingChanges],
+  )
+
+  /**
    * 强制获取确认后执行：覆盖本地并关闭确认弹窗。
    */
   const handleForceGetConfirmed = useCallback(
@@ -361,6 +388,7 @@ export function useFileActions({
     handleMappingCreated,
     handleConflictsResolved,
     handleForceGetConfirmed,
+    handleRenameConfirmed,
     runGetVersion,
   }
 }
