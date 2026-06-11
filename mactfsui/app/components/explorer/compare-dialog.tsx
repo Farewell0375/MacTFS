@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { FileText, FolderClosed, Loader2, RefreshCw } from "lucide-react"
 
 import { FileTargetMenu } from "~/components/app/file-target-menu"
@@ -9,6 +9,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog"
@@ -44,8 +45,10 @@ export function CompareDialog({
   onClose: () => void
   onFileAction: (target: FileTarget, action: FileActionId) => void | Promise<void>
 }) {
+  // 先选项后对比：setup 阶段确认选项，result 阶段展示对比结果。
+  const [phase, setPhase] = useState<"setup" | "result">("setup")
   const [diffs, setDiffs] = useState<FolderDiffItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showUpToDate, setShowUpToDate] = useState(false)
   // 忽略仅本地存在的项（如 node_modules）：勾选后只对比两端都有的文件，并跳过本地全量扫描。
@@ -71,10 +74,6 @@ export function CompareDialog({
     }
     setDiffs(result.data?.diffs ?? [])
   }, [serverPath, ignoreLocalOnly])
-
-  useEffect(() => {
-    void runCompare()
-  }, [runCompare])
 
   /**
    * 转发右键动作：签出 / 获取 / 撤销等就地执行的动作完成后自动重新对比，
@@ -127,11 +126,56 @@ export function CompareDialog({
     })
   }, [])
 
+  // 选项确认阶段：先确定对比方式再执行，避免反复触发全量对比。
+  if (phase === "setup") {
+    return (
+      <Dialog open onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>目录对比</DialogTitle>
+            <DialogDescription className="font-mono text-xs">{serverPath}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 rounded-md border bg-muted/30 p-4">
+            <label className="flex items-start gap-2 text-sm">
+              <Checkbox
+                checked={ignoreLocalOnly}
+                onCheckedChange={(value) => setIgnoreLocalOnly(value === true)}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="font-medium">忽略仅本地存在的项</span>
+                <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                  只对比两端都有的文件；仅本地存在的项（如 node_modules、构建产物）不计入差异，
+                  并跳过本地全量扫描，大目录速度更快。
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={onClose}>
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                setPhase("result")
+                void runCompare()
+              }}
+            >
+              开始对比
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex h-[88svh] max-h-[88svh] flex-col sm:max-w-[90vw]">
         <DialogHeader>
-          <DialogTitle>目录对比</DialogTitle>
+          <DialogTitle>目录对比{ignoreLocalOnly ? "（已忽略仅本地存在的项）" : ""}</DialogTitle>
           <DialogDescription className="font-mono text-xs">{serverPath}</DialogDescription>
         </DialogHeader>
 
@@ -150,24 +194,21 @@ export function CompareDialog({
               </Badge>
             </button>
           ))}
-          <label
-            className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground"
-            title="勾选后：只对比两端都有的文件，仅本地存在的项（如 node_modules）不计入差异，并跳过本地全量扫描以提升速度"
-          >
-            <Checkbox
-              checked={ignoreLocalOnly}
-              onCheckedChange={(value) => setIgnoreLocalOnly(value === true)}
-              disabled={loading}
-            />
-            忽略仅本地存在的项
-          </label>
-          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
             <Checkbox
               checked={showUpToDate}
               onCheckedChange={(value) => setShowUpToDate(value === true)}
             />
             显示最新项
           </label>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPhase("setup")}
+            disabled={loading}
+          >
+            调整选项
+          </Button>
           <Button
             variant="outline"
             size="sm"
