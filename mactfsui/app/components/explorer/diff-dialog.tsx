@@ -140,6 +140,8 @@ export function DiffDialog({
         originalEditable: false,
         automaticLayout: true,
         renderSideBySide: viewMode === "split",
+        // 统一视图下隐藏旧版行号列，避免出现两列紧贴的行号。
+        compactMode: viewMode === "unified",
         hideUnchangedRegions: { enabled: onlyChanges },
         theme: isDarkTheme() ? "mactfs-dark" : "mactfs-light",
         fontSize: 12,
@@ -182,7 +184,10 @@ export function DiffDialog({
    */
   const switchView = useCallback((mode: "unified" | "split") => {
     setViewMode(mode)
-    editorRef.current?.updateOptions({ renderSideBySide: mode === "split" })
+    editorRef.current?.updateOptions({
+      renderSideBySide: mode === "split",
+      compactMode: mode === "unified",
+    })
     if (typeof sessionStorage !== "undefined") {
       sessionStorage.setItem(VIEW_MODE_KEY, mode)
     }
