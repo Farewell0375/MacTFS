@@ -225,8 +225,14 @@ export function getFileContent(params: { serverPath?: string; localPath?: string
 
 /**
  * 对已映射目录执行目录对比。
+ * includeLocalOnly=false 时跳过本地全量扫描，仅本地存在的项（如 node_modules）不计入差异。
  */
-export function compareFolder(body: { serverPath: string; localPath?: string; recursive?: boolean }) {
+export function compareFolder(body: {
+  serverPath: string
+  localPath?: string
+  recursive?: boolean
+  includeLocalOnly?: boolean
+}) {
   return apiClient.post<{ diffs: FolderDiffItem[] }>("/api/compare/folder", { body })
 }
 

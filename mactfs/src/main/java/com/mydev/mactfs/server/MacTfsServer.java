@@ -597,7 +597,7 @@ public class MacTfsServer {
             public ApiResult call(Request request) throws Exception {
                 Map<String, Object> body = readBody(request);
                 AppConfig config = requestConfig(body);
-                CoreOperationResult<List<TfsFolderDiffItem>> result = coreService.compareFolder(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "serverPath"), "serverPath"), stringValue(body, "localPath"), booleanValue(body, "recursive", true));
+                CoreOperationResult<List<TfsFolderDiffItem>> result = coreService.compareFolder(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "serverPath"), "serverPath"), stringValue(body, "localPath"), booleanValue(body, "recursive", true), booleanValue(body, "includeLocalOnly", true));
                 Map<String, Object> data = new LinkedHashMap<String, Object>();
                 data.put("diffs", result.getData() == null ? Collections.emptyList() : result.getData());
                 return fromCore(result, data);

@@ -48,25 +48,29 @@ export function CompareDialog({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showUpToDate, setShowUpToDate] = useState(false)
-  // 忽略仅服务器存在的项（服务器有但本地没有），勾选后不计入差异。
-  const [hideServerOnly, setHideServerOnly] = useState(false)
+  // 忽略仅本地存在的项（如 node_modules）：勾选后只对比两端都有的文件，并跳过本地全量扫描。
+  const [ignoreLocalOnly, setIgnoreLocalOnly] = useState(false)
   // 状态筛选：空集合表示不过滤（除 upToDate 开关外）。
   const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set())
 
   /**
-   * 执行（或重新执行）目录对比。
+   * 执行（或重新执行）目录对比；忽略仅本地存在的项时由后端直接跳过本地扫描。
    */
   const runCompare = useCallback(async () => {
     setLoading(true)
     setError(null)
-    const result = await api.compareFolder({ serverPath, recursive: true })
+    const result = await api.compareFolder({
+      serverPath,
+      recursive: true,
+      includeLocalOnly: !ignoreLocalOnly,
+    })
     setLoading(false)
     if (!result.ok) {
       setError(result.errorMessage ?? "目录对比失败")
       return
     }
     setDiffs(result.data?.diffs ?? [])
-  }, [serverPath])
+  }, [serverPath, ignoreLocalOnly])
 
   useEffect(() => {
     void runCompare()
@@ -100,15 +104,12 @@ export function CompareDialog({
   const visibleDiffs = useMemo(
     () =>
       diffs.filter((diff) => {
-        if (hideServerOnly && (diff.status === "notDownloaded" || diff.status === "remoteOnly")) {
-          return false
-        }
         if (diff.status === "upToDate") {
           return showUpToDate && statusFilter.size === 0
         }
         return statusFilter.size === 0 || statusFilter.has(diff.status)
       }),
-    [diffs, showUpToDate, hideServerOnly, statusFilter],
+    [diffs, showUpToDate, statusFilter],
   )
 
   /**
@@ -151,13 +152,14 @@ export function CompareDialog({
           ))}
           <label
             className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground"
-            title="勾选后：服务器有但本地没有的文件（未下载）不计入差异"
+            title="勾选后：只对比两端都有的文件，仅本地存在的项（如 node_modules）不计入差异，并跳过本地全量扫描以提升速度"
           >
             <Checkbox
-              checked={hideServerOnly}
-              onCheckedChange={(value) => setHideServerOnly(value === true)}
+              checked={ignoreLocalOnly}
+              onCheckedChange={(value) => setIgnoreLocalOnly(value === true)}
+              disabled={loading}
             />
-            忽略仅服务器存在的项
+            忽略仅本地存在的项
           </label>
           <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Checkbox

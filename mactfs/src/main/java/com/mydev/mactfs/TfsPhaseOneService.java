@@ -235,7 +235,8 @@ public class TfsPhaseOneService {
             required(merged, "workspace"),
             required(merged, "server-path"),
             merged.getProperty("local-path"),
-            !"false".equalsIgnoreCase(merged.getProperty("recursive"))
+            !"false".equalsIgnoreCase(merged.getProperty("recursive")),
+            !"false".equalsIgnoreCase(merged.getProperty("include-local-only"))
         );
         Map<String, Object> data = new LinkedHashMap<String, Object>();
         data.put("diffs", folderDiffsToMaps(result.getData()));

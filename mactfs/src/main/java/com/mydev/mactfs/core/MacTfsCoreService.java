@@ -579,7 +579,8 @@ public class MacTfsCoreService {
                                                                      final String workspaceName,
                                                                      final String serverPath,
                                                                      final String localPath,
-                                                                     final boolean recursive) {
+                                                                     final boolean recursive,
+                                                                     final boolean includeLocalOnly) {
         return execute("compareFolder", new CoreCallable<List<TfsFolderDiffItem>>() {
             @Override
             public List<TfsFolderDiffItem> call(List<String> logs) throws Exception {
@@ -593,7 +594,10 @@ public class MacTfsCoreService {
                 }
                 Map<String, ExtendedItem> serverItems = queryExtendedItems(workspace, normalizedServerPath, recursive);
                 Map<String, PendingChange> pendingChanges = mapPendingChanges(queryPendingChanges(workspace, Arrays.asList(normalizedServerPath), recursive));
-                Set<String> localFiles = scanLocalFiles(new File(normalizedLocalPath), recursive);
+                // 不统计仅本地存在的项时直接跳过本地全量扫描（如 node_modules 大目录），只对比两端都有的文件。
+                Set<String> localFiles = includeLocalOnly
+                    ? scanLocalFiles(new File(normalizedLocalPath), recursive)
+                    : new LinkedHashSet<String>();
                 Map<String, TfsFolderDiffItem> result = new LinkedHashMap<String, TfsFolderDiffItem>();
 
                 for (Map.Entry<String, ExtendedItem> entry : serverItems.entrySet()) {
