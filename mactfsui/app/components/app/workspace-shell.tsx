@@ -148,6 +148,7 @@ export function WorkspaceShell({
           onForceGetConfirmed={actions.handleForceGetConfirmed}
           onGetVersion={actions.runGetVersion}
           onRenameConfirmed={actions.handleRenameConfirmed}
+          onRollback={actions.runRollback}
         />
       </div>
     </TooltipProvider>

@@ -447,6 +447,22 @@ public class MacTfsServer {
             }
         }));
 
+        Spark.post("/api/files/rollback", (request, response) -> handle(request, response, "rollback", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                Number changeset = (Number) body.get("changeset");
+                if (changeset == null) {
+                    throw new IllegalArgumentException("changeset is required");
+                }
+                CoreOperationResult<TfsGetLatestResult> result = coreService.rollback(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "serverPath"), "serverPath"), require(stringValue(body, "mode"), "mode"), changeset.intValue());
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("result", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
         Spark.post("/api/files/rename", (request, response) -> handle(request, response, "rename", TIMEOUT_DEFAULT_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {

@@ -112,6 +112,48 @@ export function useFileActions({
   )
 
   /**
+   * 执行变更集回滚（产生挂起更改，不直接入库），由历史弹窗中的确认操作触发；
+   * 出现冲突时进入统一冲突弹窗，完成后刷新挂起更改与目录列表。
+   */
+  const runRollback = useCallback(
+    async (
+      serverPath: string,
+      mode: "single" | "toVersion",
+      changeset: number,
+    ): Promise<boolean> => {
+      setNotice({
+        kind: "info",
+        text: mode === "single" ? `正在回滚变更集 C${changeset}…` : `正在回滚到 C${changeset}…`,
+      })
+      const result = await api.rollback({ serverPath, mode, changeset })
+      refreshLogs()
+      if (!result.ok || !result.data) {
+        setNotice({ kind: "error", text: result.errorMessage ?? "回滚失败" })
+        return false
+      }
+      const summary = result.data.result
+      const parts = [`产生挂起更改 ${summary.operations} 项`]
+      if (summary.conflicts > 0) {
+        parts.push(`冲突 ${summary.conflicts} 项`)
+      }
+      if (summary.failures > 0) {
+        parts.push(`失败 ${summary.failures} 项`)
+      }
+      setNotice({
+        kind: summary.conflicts > 0 || summary.failures > 0 ? "error" : "info",
+        text: `回滚完成：${parts.join("，")}，请在挂起更改面板审查后签入`,
+      })
+      await refreshPendingChanges()
+      refreshItems()
+      if (summary.conflicts > 0) {
+        setDialog({ kind: "conflicts", serverPath })
+      }
+      return true
+    },
+    [refreshItems, refreshLogs, refreshPendingChanges],
+  )
+
+  /**
    * 执行 Checkout：先 Get Latest，出现冲突时进入统一冲突弹窗；
    * 无冲突则签出并提示跳过 / 失败项，完成后刷新挂起更改。
    */
@@ -390,5 +432,6 @@ export function useFileActions({
     handleForceGetConfirmed,
     handleRenameConfirmed,
     runGetVersion,
+    runRollback,
   }
 }

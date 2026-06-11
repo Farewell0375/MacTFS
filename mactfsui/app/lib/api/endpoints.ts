@@ -168,6 +168,13 @@ export function renameFile(body: { serverPath: string; newName: string }) {
 }
 
 /**
+ * 回滚变更集（只产生挂起更改）：single 仅反做该 changeset，toVersion 反做其后全部改动。
+ */
+export function rollback(body: { serverPath: string; mode: "single" | "toVersion"; changeset: number }) {
+  return apiClient.post<{ result: GetLatestResult }>("/api/files/rollback", { body })
+}
+
+/**
  * 读取当前 Workspace 的挂起更改。
  */
 export function getPendingChanges(params: { serverPath?: string } = {}) {

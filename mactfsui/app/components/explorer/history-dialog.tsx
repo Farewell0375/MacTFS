@@ -44,6 +44,13 @@ interface VersionConfirm {
   folder: boolean
 }
 
+// 「回滚」待确认信息：single 仅反做该变更集，toVersion 反做其后全部改动。
+interface RollbackConfirm {
+  serverPath: string
+  changeset: number
+  mode: "single" | "toVersion"
+}
+
 /**
  * History 弹窗：展示文件或目录历史（最近记录）。
  * 目录历史可下钻 changeset 影响文件；changeset 文件支持右键查看此版本 /
@@ -56,12 +63,14 @@ export function HistoryDialog({
   onClose,
   onDiffRevisions,
   onGetVersion,
+  onRollback,
 }: {
   serverPath: string
   folder: boolean
   onClose: () => void
   onDiffRevisions?: (serverPath: string, source: number, target: number) => void
   onGetVersion?: (serverPath: string, changeset: number, folder: boolean) => Promise<boolean>
+  onRollback?: (serverPath: string, mode: "single" | "toVersion", changeset: number) => Promise<boolean>
 }) {
   const [target, setTarget] = useState<HistoryTarget>({ serverPath, folder })
   // 下钻历史目标栈：从 changeset 文件进入单文件历史后可逐级返回。
@@ -78,6 +87,8 @@ export function HistoryDialog({
   // 文件历史勾选的 changeset（最多两个），用于版本对比。
   const [selected, setSelected] = useState<number[]>([])
   const [confirmVersion, setConfirmVersion] = useState<VersionConfirm | null>(null)
+  // 「回滚」待确认信息。
+  const [confirmRollback, setConfirmRollback] = useState<RollbackConfirm | null>(null)
   // 「查看此版本内容」叠加的文件查看弹窗目标。
   const [viewVersion, setViewVersion] = useState<{ serverPath: string; changeset: number } | null>(null)
 
@@ -238,8 +249,9 @@ export function HistoryDialog({
               </TableHeader>
               <TableBody>
                 {entries.map((entry) => (
+                  <ContextMenu key={`${entry.changeset}-${entry.serverPath}`}>
+                    <ContextMenuTrigger asChild>
                   <TableRow
-                    key={`${entry.changeset}-${entry.serverPath}`}
                     className="cursor-default select-none"
                     onDoubleClick={() => {
                       if (target.folder) {
@@ -296,6 +308,54 @@ export function HistoryDialog({
                       </TableCell>
                     )}
                   </TableRow>
+                    </ContextMenuTrigger>
+                    {(onGetVersion || onRollback) && (
+                      <ContextMenuContent className="w-60">
+                        {onGetVersion && (
+                          <ContextMenuItem
+                            onSelect={() =>
+                              setConfirmVersion({
+                                serverPath: target.serverPath,
+                                changeset: entry.changeset,
+                                folder: target.folder,
+                              })
+                            }
+                          >
+                            获取此版本（C{entry.changeset}）…
+                          </ContextMenuItem>
+                        )}
+                        {onGetVersion && onRollback && <ContextMenuSeparator />}
+                        {onRollback && (
+                          <>
+                            <ContextMenuItem
+                              variant="destructive"
+                              onSelect={() =>
+                                setConfirmRollback({
+                                  serverPath: target.serverPath,
+                                  changeset: entry.changeset,
+                                  mode: "single",
+                                })
+                              }
+                            >
+                              回滚此变更集（C{entry.changeset}）…
+                            </ContextMenuItem>
+                            <ContextMenuItem
+                              variant="destructive"
+                              onSelect={() =>
+                                setConfirmRollback({
+                                  serverPath: target.serverPath,
+                                  changeset: entry.changeset,
+                                  mode: "toVersion",
+                                })
+                              }
+                            >
+                              回滚到此变更集（C{entry.changeset}）…
+                            </ContextMenuItem>
+                          </>
+                        )}
+                      </ContextMenuContent>
+                    )}
+                  </ContextMenu>
                 ))}
               </TableBody>
             </Table>
@@ -349,6 +409,40 @@ export function HistoryDialog({
               setConfirmVersion(null)
             }}
             onClose={() => setConfirmVersion(null)}
+          />
+        )}
+
+        {confirmRollback && onRollback && (
+          <ConfirmDialog
+            title={
+              confirmRollback.mode === "single"
+                ? `回滚变更集 C${confirmRollback.changeset}`
+                : `回滚到变更集 C${confirmRollback.changeset}`
+            }
+            description={
+              <>
+                <p>
+                  将对 <span className="font-mono text-xs">{confirmRollback.serverPath}</span>{" "}
+                  {confirmRollback.mode === "single"
+                    ? `反做变更集 C${confirmRollback.changeset} 的改动。`
+                    : `反做 C${confirmRollback.changeset} 之后的全部改动（回到该变更集时刻的内容）。`}
+                </p>
+                <p className="mt-2">
+                  回滚只会产生挂起更改，不会直接写入服务器；可在挂起更改面板审查、撤销，确认无误后签入。
+                </p>
+              </>
+            }
+            confirmLabel="执行回滚"
+            danger
+            onConfirm={async () => {
+              await onRollback(
+                confirmRollback.serverPath,
+                confirmRollback.mode,
+                confirmRollback.changeset,
+              )
+              setConfirmRollback(null)
+            }}
+            onClose={() => setConfirmRollback(null)}
           />
         )}
 

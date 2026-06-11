@@ -27,6 +27,7 @@ export function WorkspaceDialogs({
   onForceGetConfirmed,
   onGetVersion,
   onRenameConfirmed,
+  onRollback,
 }: {
   dialog: WorkspaceDialogState
   mappings: MappingInfo[]
@@ -38,6 +39,7 @@ export function WorkspaceDialogs({
   onForceGetConfirmed: (serverPath: string, folder: boolean) => Promise<void>
   onGetVersion: (serverPath: string, changeset: number, folder: boolean) => Promise<boolean>
   onRenameConfirmed: (serverPath: string, newName: string) => Promise<boolean>
+  onRollback: (serverPath: string, mode: "single" | "toVersion", changeset: number) => Promise<boolean>
 }) {
   if (!dialog) {
     return null
@@ -64,6 +66,7 @@ export function WorkspaceDialogs({
             })
           }
           onGetVersion={onGetVersion}
+          onRollback={onRollback}
         />
       )
     case "compare":

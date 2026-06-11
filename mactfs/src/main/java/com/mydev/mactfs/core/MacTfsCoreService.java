@@ -14,6 +14,7 @@ import com.microsoft.tfs.core.clients.versioncontrol.GetItemsOptions;
 import com.microsoft.tfs.core.clients.versioncontrol.GetOptions;
 import com.microsoft.tfs.core.clients.versioncontrol.GetStatus;
 import com.microsoft.tfs.core.clients.versioncontrol.PendChangesOptions;
+import com.microsoft.tfs.core.clients.versioncontrol.RollbackOptions;
 import com.microsoft.tfs.core.clients.versioncontrol.VersionControlClient;
 import com.microsoft.tfs.core.clients.versioncontrol.WorkspaceLocation;
 import com.microsoft.tfs.core.clients.versioncontrol.WorkspaceOptions;
@@ -389,6 +390,34 @@ public class MacTfsCoreService {
                 int affected = workspace.undo(specs, GetOptions.NONE);
                 logs.add("Undo affected: " + affected);
                 return new TfsFileOperationResult("undo", affected, Collections.<String>emptyList());
+            }
+        });
+    }
+
+    /**
+     * 回滚变更集（只产生挂起更改，需用户审查后签入）：
+     * mode=single 仅反做该 changeset；mode=toVersion 反做该 changeset 之后的全部改动。
+     */
+    public CoreOperationResult<TfsGetLatestResult> rollback(final TfsConnectionConfig config,
+                                                            final String collectionName,
+                                                            final String workspaceName,
+                                                            final String serverPath,
+                                                            final String mode,
+                                                            final int changesetId) {
+        return execute("rollback", new CoreCallable<TfsGetLatestResult>() {
+            @Override
+            public TfsGetLatestResult call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                ItemSpec[] specs = new ItemSpec[] {
+                    new ItemSpec(normalizeServerPath(require(serverPath, "serverPath")), RecursionType.FULL)
+                };
+                boolean toVersion = "toVersion".equalsIgnoreCase(require(mode, "mode"));
+                ChangesetVersionSpec changesetSpec = new ChangesetVersionSpec(changesetId);
+                GetStatus status = toVersion
+                    ? workspace.rollback(specs, LatestVersionSpec.INSTANCE, null, changesetSpec, LockLevel.NONE, RollbackOptions.TO_VERSION)
+                    : workspace.rollback(specs, LatestVersionSpec.INSTANCE, changesetSpec, changesetSpec, LockLevel.NONE, RollbackOptions.NONE);
+                logs.add("Rollback mode=" + mode + " changeset=" + changesetId + " operations=" + status.getNumOperations());
+                return toGetLatestResult(status);
             }
         });
     }
