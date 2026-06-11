@@ -258,7 +258,7 @@ export function DiffDialog({
       <DialogContent className="flex h-[92svh] max-h-[92svh] flex-col sm:max-w-[94vw]">
         <DialogHeader>
           <DialogTitle>
-            {request.mode === "localLatest" ? "本地 vs 服务器 latest" : "历史版本对比"}
+            {request.mode === "localLatest" ? "服务器 latest vs 本地" : "历史版本对比"}
           </DialogTitle>
           <DialogDescription className="font-mono text-xs">
             {request.serverPath}

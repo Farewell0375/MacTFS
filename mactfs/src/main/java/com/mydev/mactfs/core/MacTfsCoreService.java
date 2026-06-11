@@ -1,5 +1,8 @@
 package com.mydev.mactfs.core;
 
+import com.github.difflib.DiffUtils;
+import com.github.difflib.patch.AbstractDelta;
+import com.github.difflib.patch.Patch;
 import com.microsoft.tfs.core.TFSConfigurationServer;
 import com.microsoft.tfs.core.TFSTeamProjectCollection;
 import com.microsoft.tfs.core.clients.framework.configuration.TFSEntitySession;
@@ -596,7 +599,8 @@ public class MacTfsCoreService {
                     throw new IllegalStateException(latest.getErrorMessage());
                 }
                 String localContent = new String(Files.readAllBytes(new File(require(localPath, "localPath")).toPath()), TEXT_CHARSET);
-                TfsTextDiff diff = buildTextDiff(localPath, serverPath, localContent, latest.getData().getContent());
+                // 服务器 latest 作为旧版（左侧），本地文件作为新版（右侧），本地新增行才会标记为 "+"。
+                TfsTextDiff diff = buildTextDiff(serverPath, localPath, latest.getData().getContent(), localContent);
                 logs.add("Text diff lines: " + diff.getLines().size());
                 return diff;
             }
@@ -1176,21 +1180,28 @@ public class MacTfsCoreService {
     private TfsTextDiff buildTextDiff(String sourceLabel, String targetLabel, String sourceContent, String targetContent) {
         List<String> sourceLines = Arrays.asList(sourceContent.split("\\r?\\n", -1));
         List<String> targetLines = Arrays.asList(targetContent.split("\\r?\\n", -1));
-        int max = Math.max(sourceLines.size(), targetLines.size());
+        // 使用 java-diff-utils（Myers 算法）计算最小差异，
+        // 避免按行号硬对齐导致插入/删除一行后其余行全部误报为变动。
+        Patch<String> patch = DiffUtils.diff(sourceLines, targetLines);
         List<String> lines = new ArrayList<String>();
-        for (int index = 0; index < max; index++) {
-            String source = index < sourceLines.size() ? sourceLines.get(index) : null;
-            String target = index < targetLines.size() ? targetLines.get(index) : null;
-            if (source != null && target != null && source.equals(target)) {
-                lines.add(" " + source);
-            } else {
-                if (source != null) {
-                    lines.add("-" + source);
-                }
-                if (target != null) {
-                    lines.add("+" + target);
-                }
+        int sourceIndex = 0;
+        for (AbstractDelta<String> delta : patch.getDeltas()) {
+            int deltaStart = delta.getSource().getPosition();
+            while (sourceIndex < deltaStart) {
+                lines.add(" " + sourceLines.get(sourceIndex));
+                sourceIndex++;
             }
+            for (String removed : delta.getSource().getLines()) {
+                lines.add("-" + removed);
+            }
+            for (String added : delta.getTarget().getLines()) {
+                lines.add("+" + added);
+            }
+            sourceIndex += delta.getSource().size();
+        }
+        while (sourceIndex < sourceLines.size()) {
+            lines.add(" " + sourceLines.get(sourceIndex));
+            sourceIndex++;
         }
         return new TfsTextDiff(sourceLabel, targetLabel, lines);
     }
