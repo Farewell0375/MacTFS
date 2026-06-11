@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
-import { FileText, FolderClosed, Loader2, RefreshCw } from "lucide-react"
+import { AlertCircle, FolderOpen, RefreshCw } from "lucide-react"
 
 import { Button } from "~/components/ui/button"
 
 import { FileTargetMenu } from "~/components/app/file-target-menu"
+import { FileIcon } from "~/components/explorer/file-icon"
 import { Badge } from "~/components/ui/badge"
 import {
   Table,
@@ -152,19 +153,22 @@ export function FolderItemsPanel({
       </div>
 
       <FileTargetMenu target={currentFolderTarget} onAction={onFileAction}>
-      <div className="min-h-0 flex-1 overflow-auto">
+      {/* 由 table-container 自身承担纵横滚动：表头 sticky 不随内容滚走，横向滚动条始终贴可视区底部 */}
+      <div className="min-h-0 flex-1 overflow-hidden [&_[data-slot=table-container]]:h-full [&_[data-slot=table-container]]:overflow-auto">
         {loading ? (
-          <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            正在加载目录…
-          </div>
+          <ItemsSkeleton />
         ) : error ? (
-          <div className="flex h-full items-center justify-center p-6 text-sm text-destructive">
-            {error}
+          <div className="flex h-full flex-col items-center justify-center gap-2 p-6">
+            <AlertCircle className="size-8 text-destructive/60" />
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         ) : rows.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            当前目录为空
+          <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
+            <FolderOpen className="size-8 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">当前目录为空</p>
+            <p className="text-xs text-muted-foreground/70">
+              右键空白处可对当前目录执行获取、映射或添加本地文件
+            </p>
           </div>
         ) : (
           <Table>
@@ -182,7 +186,7 @@ export function FolderItemsPanel({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((row) => {
+              {rows.map((row, index) => {
                 const selected = row.item.serverPath === selectedItemPath
                 const target = makeFileTarget({
                   source: "list",
@@ -199,7 +203,8 @@ export function FolderItemsPanel({
                   >
                   <TableRow
                     data-state={selected ? "selected" : undefined}
-                    className="cursor-default select-none"
+                    className="animate-in fade-in cursor-default select-none fill-mode-backwards duration-200"
+                    style={{ animationDelay: `${Math.min(index, 12) * 18}ms` }}
                     onClick={() => setSelectedItemPath(row.item.serverPath)}
                     onContextMenu={(event) => {
                       // 阻止冒泡到外层「当前目录」菜单，避免双菜单。
@@ -214,19 +219,20 @@ export function FolderItemsPanel({
                   >
                     <TableCell className="py-1.5">
                       <span className="flex items-center gap-1.5" title={row.item.serverPath}>
-                        {row.item.folder ? (
-                          <FolderClosed className="size-3.5 shrink-0 text-muted-foreground" />
-                        ) : (
-                          <FileText className="size-3.5 shrink-0 text-muted-foreground" />
-                        )}
+                        <FileIcon
+                          name={row.item.name}
+                          folder={row.item.folder}
+                          mapped={row.item.folder && row.localPath != null}
+                        />
                         <span className="truncate text-sm">{row.item.name}</span>
                       </span>
                     </TableCell>
                     <TableCell className="py-1.5">
                       <Badge
                         variant="secondary"
-                        className={cn("rounded-md", statusBadgeClass(row.localState))}
+                        className={cn("gap-1.5 rounded-md", statusBadgeClass(row.localState))}
                       >
+                        <span className="size-1.5 rounded-full bg-current opacity-60" />
                         {statusLabel(row.localState)}
                       </Badge>
                     </TableCell>
@@ -267,5 +273,27 @@ export function FolderItemsPanel({
         )}
       </div>
     </section>
+  )
+}
+
+/**
+ * 目录加载骨架屏：模拟表格行的占位条，替代纯文字 loading。
+ */
+function ItemsSkeleton() {
+  return (
+    <div className="space-y-2 p-3">
+      {Array.from({ length: 9 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex animate-pulse items-center gap-3"
+          style={{ animationDelay: `${index * 80}ms` }}
+        >
+          <span className="size-4 rounded bg-muted" />
+          <span className="h-3.5 rounded bg-muted" style={{ width: `${160 + ((index * 53) % 120)}px` }} />
+          <span className="h-3.5 w-14 rounded-full bg-muted" />
+          <span className="ml-auto h-3 w-28 rounded bg-muted" />
+        </div>
+      ))}
+    </div>
   )
 }

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { ChevronRight, FolderClosed, FolderOpen, Loader2, RefreshCw } from "lucide-react"
+import { ChevronRight, Loader2, RefreshCw } from "lucide-react"
 
 import { FileTargetMenu } from "~/components/app/file-target-menu"
+import { FileIcon } from "~/components/explorer/file-icon"
 import { Button } from "~/components/ui/button"
 import { ScrollArea } from "~/components/ui/scroll-area"
 import { api } from "~/lib/api"
@@ -12,6 +13,7 @@ import {
   getAncestorPaths,
   makeFileTarget,
   normalizeServerPath,
+  resolveLocalPath,
 } from "~/lib/tfs"
 import { cn } from "~/lib/utils"
 
@@ -202,6 +204,7 @@ function TreeNode({
   const isSelected = selectedServerPath === path
   // 未加载前默认认为可能有子目录；加载后子目录为空则视为叶子。
   const isLeaf = children != null && children.length === 0
+  const isMapped = resolveLocalPath(mappings, path) != null
   const target = makeFileTarget({ source: "tree", folder: true, serverPath: path, mappings })
 
   return (
@@ -209,8 +212,8 @@ function TreeNode({
       <FileTargetMenu target={target} onAction={onFileAction}>
         <div
           className={cn(
-            "group flex h-7 items-center rounded-md pr-1",
-            isSelected ? "bg-primary/10" : "hover:bg-muted",
+            "group flex h-7 items-center rounded-md pr-1 transition-colors duration-150",
+            isSelected ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60",
           )}
           style={{ paddingLeft: `${depth * 14 + 2}px` }}
         >
@@ -222,10 +225,13 @@ function TreeNode({
                 type="button"
                 aria-label={isExpanded ? "收起目录" : "展开目录"}
                 onClick={() => onToggle(path)}
-                className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors duration-150 hover:text-foreground"
               >
                 <ChevronRight
-                  className={cn("size-3.5 transition-transform", isExpanded && "rotate-90")}
+                  className={cn(
+                    "size-3.5 transition-transform duration-200 ease-out-quart",
+                    isExpanded && "rotate-90",
+                  )}
                 />
               </button>
             )}
@@ -235,11 +241,7 @@ function TreeNode({
             onClick={() => onSelect(path)}
             className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
           >
-            {isExpanded && !isLeaf ? (
-              <FolderOpen className="size-3.5 shrink-0 text-muted-foreground" />
-            ) : (
-              <FolderClosed className="size-3.5 shrink-0 text-muted-foreground" />
-            )}
+            <FileIcon name={name} folder mapped={isMapped} expanded={isExpanded && !isLeaf} />
             <span
               className={cn(
                 "truncate text-sm",
@@ -251,23 +253,26 @@ function TreeNode({
           </button>
         </div>
       </FileTargetMenu>
-      {isExpanded &&
-        children?.map((child) => (
-          <TreeNode
-            key={child.serverPath}
-            path={child.serverPath}
-            name={child.name}
-            depth={depth + 1}
-            mappings={mappings}
-            childrenByPath={childrenByPath}
-            expanded={expanded}
-            loadingPaths={loadingPaths}
-            selectedServerPath={selectedServerPath}
-            onToggle={onToggle}
-            onSelect={onSelect}
-            onFileAction={onFileAction}
-          />
-        ))}
+      {isExpanded && children != null && children.length > 0 && (
+        <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+          {children.map((child) => (
+            <TreeNode
+              key={child.serverPath}
+              path={child.serverPath}
+              name={child.name}
+              depth={depth + 1}
+              mappings={mappings}
+              childrenByPath={childrenByPath}
+              expanded={expanded}
+              loadingPaths={loadingPaths}
+              selectedServerPath={selectedServerPath}
+              onToggle={onToggle}
+              onSelect={onSelect}
+              onFileAction={onFileAction}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
