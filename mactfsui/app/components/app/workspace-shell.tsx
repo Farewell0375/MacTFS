@@ -155,6 +155,7 @@ export function WorkspaceShell({
           onRollback={actions.runRollback}
           onBranchConfirmed={actions.handleBranchConfirmed}
           onMergeConfirmed={actions.handleMergeConfirmed}
+          onAddFilesConfirmed={actions.handleAddFilesConfirmed}
         />
 
         {manageOpen && (

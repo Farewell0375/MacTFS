@@ -1,4 +1,5 @@
 import { ConfirmDialog } from "~/components/app/confirm-dialog"
+import { AddFilesDialog } from "~/components/explorer/add-files-dialog"
 import { BranchDialog } from "~/components/explorer/branch-dialog"
 import { CompareDialog } from "~/components/explorer/compare-dialog"
 import { ConflictDialog } from "~/components/explorer/conflict-dialog"
@@ -32,6 +33,7 @@ export function WorkspaceDialogs({
   onRollback,
   onBranchConfirmed,
   onMergeConfirmed,
+  onAddFilesConfirmed,
 }: {
   dialog: WorkspaceDialogState
   mappings: MappingInfo[]
@@ -54,6 +56,7 @@ export function WorkspaceDialogs({
     targetServerPath: string,
     changeset: number | undefined,
   ) => Promise<boolean>
+  onAddFilesConfirmed: (localPaths: string[]) => Promise<boolean>
 }) {
   if (!dialog) {
     return null
@@ -141,6 +144,14 @@ export function WorkspaceDialogs({
           onMerge={(targetServerPath, changeset) =>
             onMergeConfirmed(dialog.serverPath, targetServerPath, changeset)
           }
+          onClose={onClose}
+        />
+      )
+    case "addFiles":
+      return (
+        <AddFilesDialog
+          serverPath={dialog.serverPath}
+          onConfirm={onAddFilesConfirmed}
           onClose={onClose}
         />
       )

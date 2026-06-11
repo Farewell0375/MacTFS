@@ -45,10 +45,4 @@ contextBridge.exposeInMainWorld("mactfs", {
   revealPath(targetPath, isFolder) {
     return ipcRenderer.invoke("mactfs:reveal-path", targetPath, isFolder)
   },
-  /**
-   * 打开系统文件选择器（多选），返回所选文件路径列表。
-   */
-  selectFiles(defaultPath) {
-    return ipcRenderer.invoke("mactfs:select-files", defaultPath)
-  },
 })

@@ -258,17 +258,6 @@ function registerIpcHandlers() {
     shell.showItemInFolder(targetPath)
     return true
   })
-  ipcMain.handle("mactfs:select-files", async (event, defaultPath) => {
-    const options = { properties: ["openFile", "multiSelections"] }
-    if (typeof defaultPath === "string" && defaultPath.length > 0 && fs.existsSync(defaultPath)) {
-      options.defaultPath = defaultPath
-    }
-    const result = await dialog.showOpenDialog(options)
-    if (result.canceled || result.filePaths.length === 0) {
-      return null
-    }
-    return result.filePaths
-  })
 }
 
 /**

@@ -3,7 +3,7 @@ import { useCallback, useState } from "react"
 import type { DiffRequest } from "~/components/explorer/diff-dialog"
 import { api } from "~/lib/api"
 import type { MappingInfo } from "~/lib/api"
-import { isElectron, revealPath, selectFiles } from "~/lib/electron"
+import { isElectron, revealPath } from "~/lib/electron"
 import type { FileActionId, FileTarget } from "~/lib/tfs"
 
 // 当前打开的业务弹窗：Mapping / History / 目录对比 / 文件查看 / Diff / 冲突处理 / 覆盖类确认 / 属性 / 获取特定版本。
@@ -20,6 +20,7 @@ export type WorkspaceDialogState =
   | { kind: "rename"; serverPath: string; folder: boolean }
   | { kind: "branch"; serverPath: string }
   | { kind: "merge"; serverPath: string }
+  | { kind: "addFiles"; serverPath: string }
   | null
 
 // 顶部细条通知：信息（操作摘要）或错误。
@@ -282,43 +283,13 @@ export function useFileActions({
           }
           break
         }
-        case "addLocalFiles": {
-          if (!target.localPath) {
+        case "addLocalFiles":
+          // 扫描式添加：弹窗内目录对比筛出本地新增项，勾选后批量 pend add。
+          if (!target.mapped) {
             return
           }
-          if (!isElectron()) {
-            setNotice({ kind: "error", text: "「添加本地文件」仅桌面应用支持" })
-            return
-          }
-          const selected = await selectFiles(target.localPath)
-          if (!selected || selected.length === 0) {
-            return
-          }
-          // 只允许添加位于该目录本地路径内的文件，越界项跳过并提示。
-          const prefix = `${target.localPath}/`
-          const inside = selected.filter((path) => path.startsWith(prefix))
-          const skipped = selected.length - inside.length
-          if (inside.length === 0) {
-            setNotice({ kind: "error", text: "所选文件不在该目录的本地路径内，已全部跳过" })
-            return
-          }
-          setActionBusy(true)
-          setNotice({ kind: "info", text: "正在添加到版本控制…" })
-          const result = await api.addFiles({ paths: inside, recursive: false })
-          refreshLogs()
-          setActionBusy(false)
-          if (!result.ok || !result.data) {
-            setNotice({ kind: "error", text: result.errorMessage ?? "添加失败" })
-            return
-          }
-          setNotice({
-            kind: skipped > 0 ? "error" : "info",
-            text: `已加入版本控制 ${result.data.result.affected} 项${skipped > 0 ? `，跳过目录外文件 ${skipped} 项` : ""}，签入后服务器生效`,
-          })
-          await refreshPendingChanges()
-          refreshItems()
+          setDialog({ kind: "addFiles", serverPath: target.serverPath })
           break
-        }
         case "checkout":
           setActionBusy(true)
           setNotice({ kind: "info", text: "正在签出…" })
@@ -526,6 +497,29 @@ export function useFileActions({
   )
 
   /**
+   * 添加本地文件确认后执行：批量 pend add 并刷新挂起更改与目录列表。
+   */
+  const handleAddFilesConfirmed = useCallback(
+    async (localPaths: string[]): Promise<boolean> => {
+      setNotice({ kind: "info", text: "正在添加到版本控制…" })
+      const result = await api.addFiles({ paths: localPaths })
+      refreshLogs()
+      if (!result.ok || !result.data) {
+        setNotice({ kind: "error", text: result.errorMessage ?? "添加失败" })
+        return false
+      }
+      setNotice({
+        kind: "info",
+        text: `已加入版本控制 ${result.data.result.affected} 项，请在挂起更改面板审查后签入`,
+      })
+      await refreshPendingChanges()
+      refreshItems()
+      return true
+    },
+    [refreshItems, refreshLogs, refreshPendingChanges],
+  )
+
+  /**
    * 强制获取确认后执行：覆盖本地并关闭确认弹窗。
    */
   const handleForceGetConfirmed = useCallback(
@@ -561,6 +555,7 @@ export function useFileActions({
     handleRenameConfirmed,
     handleBranchConfirmed,
     handleMergeConfirmed,
+    handleAddFilesConfirmed,
     runGetVersion,
     runRollback,
   }

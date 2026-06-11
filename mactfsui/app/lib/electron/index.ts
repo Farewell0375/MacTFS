@@ -8,6 +8,5 @@ export {
   pathsExist,
   revealPath,
   selectDirectory,
-  selectFiles,
   startService,
 } from "./bridge"

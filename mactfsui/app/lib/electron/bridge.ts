@@ -97,17 +97,6 @@ export async function revealPath(targetPath: string, isFolder: boolean): Promise
 }
 
 /**
- * 打开系统文件选择器（多选），非 Electron 环境返回 null。
- */
-export async function selectFiles(defaultPath?: string): Promise<string[] | null> {
-  const bridge = getBridge()
-  if (!bridge) {
-    return null
-  }
-  return bridge.selectFiles(defaultPath)
-}
-
-/**
  * 构造非 Electron 环境下的占位服务状态。
  */
 function unavailableStatus(): ServiceStatus {
