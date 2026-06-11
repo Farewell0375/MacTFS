@@ -19,6 +19,7 @@
     "clsx": "^2.1.1",
     "isbot": "^5.1.36",
     "lucide-react": "^1.16.0",
+    "monaco-editor": "^0.55.1",
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

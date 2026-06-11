@@ -31,10 +31,10 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 17 | 17 | 100% |
+| Frontend | 18 | 18 | 100% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 41 | 50 | 82% |
+| Overall | 42 | 51 | 82% |
 
 ## 当前阶段
 
@@ -108,6 +108,7 @@ Feature E2E（前端阶段含增强已全部完成）
 | [FE-015-完善历史与对比结果的对象操作.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-015-完善历史与对比结果的对象操作.md) | done | P0 |
 | [FE-016-优化Diff与历史弹窗体验.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-016-优化Diff与历史弹窗体验.md) | done | P1 |
 | [FE-017-实现工作台手动刷新.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-017-实现工作台手动刷新.md) | done | P1 |
+| [FE-018-Diff弹窗替换为MonacoDiffEditor.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-018-Diff弹窗替换为MonacoDiffEditor.md) | done | P1 |
 
 ## Feature E2E
 
