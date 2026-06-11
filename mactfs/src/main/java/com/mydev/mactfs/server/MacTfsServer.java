@@ -52,7 +52,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * macTFS 第二阶段本地 API 服务入口，负责 HTTP 路由、Token 校验、配置、会话、日志和超时控制。
+ * MacTFS 第二阶段本地 API 服务入口，负责 HTTP 路由、Token 校验、配置、会话、日志和超时控制。
  */
 public class MacTfsServer {
 
@@ -93,8 +93,8 @@ public class MacTfsServer {
         registerFilters();
         registerRoutes();
         Spark.awaitInitialization();
-        System.out.println("macTFS API server listening on http://" + HOST + ":" + PORT);
-        System.out.println("macTFS token file: " + tokenStore.getTokenFile().getAbsolutePath());
+        System.out.println("MacTFS API server listening on http://" + HOST + ":" + PORT);
+        System.out.println("MacTFS token file: " + tokenStore.getTokenFile().getAbsolutePath());
     }
 
     /**

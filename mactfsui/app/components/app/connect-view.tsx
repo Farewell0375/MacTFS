@@ -140,7 +140,7 @@ export function ConnectView({ onReady }: { onReady: (session: WorkspaceSession) 
     <div className="flex min-h-svh items-center justify-center bg-muted/40 p-6">
       <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-sm">
         <div className="space-y-1">
-          <h1 className="text-base font-semibold">macTFS</h1>
+          <h1 className="text-base font-semibold">MacTFS</h1>
           <p className="text-sm text-muted-foreground">
             {phase === "form" ? "连接 TFS 服务器" : "选择 Collection"}
           </p>

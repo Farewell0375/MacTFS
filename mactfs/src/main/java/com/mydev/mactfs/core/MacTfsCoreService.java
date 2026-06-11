@@ -64,7 +64,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * macTFS 核心服务层，封装 TFS 连接、目录、Workspace、文件操作、历史和 Diff 能力。
+ * MacTFS 核心服务层，封装 TFS 连接、目录、Workspace、文件操作、历史和 Diff 能力。
  */
 public class MacTfsCoreService {
 
@@ -139,7 +139,7 @@ public class MacTfsCoreService {
     }
 
     /**
-     * 查询或创建 Collection 默认 Workspace，未传名称时按 macTFS 规则生成。
+     * 查询或创建 Collection 默认 Workspace，未传名称时按 MacTFS 规则生成。
      */
     public CoreOperationResult<TfsWorkspaceInfo> ensureWorkspace(final TfsConnectionConfig config,
                                                                 final String collectionName,

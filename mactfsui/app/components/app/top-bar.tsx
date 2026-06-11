@@ -33,7 +33,7 @@ export function TopBar({
   return (
     <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b bg-background px-3">
       <div className="flex min-w-0 items-center gap-2 text-sm">
-        <span className="shrink-0 font-semibold">macTFS</span>
+        <span className="shrink-0 font-semibold">MacTFS</span>
         <Separator orientation="vertical" className="h-4!" />
         <span className="hidden shrink-0 text-xs text-muted-foreground lg:inline">
           服务器

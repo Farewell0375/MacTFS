@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron")
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage } = require("electron")
 const path = require("node:path")
 const fs = require("node:fs")
 const os = require("node:os")
@@ -261,12 +261,31 @@ function registerIpcHandlers() {
 }
 
 /**
+ * 解析应用图标路径：开发态用 public/logo.png，打包态用构建产物中的 logo.png。
+ */
+function resolveAppIcon() {
+  const candidates = [
+    path.join(__dirname, "..", "public", "logo.png"),
+    path.join(__dirname, "..", "build", "client", "logo.png"),
+  ]
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate
+    }
+  }
+  return null
+}
+
+/**
  * 创建 Electron 主窗口，开发环境加载本地服务，生产环境加载构建后的静态页面。
  */
 function createWindow() {
+  const iconPath = resolveAppIcon()
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 840,
+    title: "MacTFS",
+    ...(iconPath ? { icon: nativeImage.createFromPath(iconPath) } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -282,7 +301,14 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, "../build/client/index.html"))
 }
 
+app.setName("MacTFS")
+
 app.whenReady().then(() => {
+  // macOS 程序坞图标在开发态需要显式设置（BrowserWindow icon 仅对 Windows / Linux 生效）。
+  const iconPath = resolveAppIcon()
+  if (process.platform === "darwin" && iconPath && app.dock) {
+    app.dock.setIcon(nativeImage.createFromPath(iconPath))
+  }
   registerIpcHandlers()
   createWindow()
 

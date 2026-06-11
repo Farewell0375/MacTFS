@@ -214,7 +214,7 @@ public class MacTfsCli {
     private static String readServerToken() throws Exception {
         File tokenFile = serverTokenFile();
         if (!tokenFile.exists()) {
-            throw new IllegalArgumentException("Token file not found: " + tokenFile.getAbsolutePath() + ". Start macTFS API server first.");
+            throw new IllegalArgumentException("Token file not found: " + tokenFile.getAbsolutePath() + ". Start MacTFS API server first.");
         }
         String token = new String(java.nio.file.Files.readAllBytes(tokenFile.toPath()), Charset.forName("UTF-8")).trim();
         if (token.length() == 0) {

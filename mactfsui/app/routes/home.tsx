@@ -12,6 +12,13 @@ import type { WorkspaceSession } from "~/lib/tfs/session"
 type AppPhase = "checking" | "blocked" | "connect" | "workspace"
 
 /**
+ * 页面标题（同时作为 Electron 窗口标题）。
+ */
+export function meta() {
+  return [{ title: "MacTFS" }]
+}
+
+/**
  * 第一版前端入口：先确保本地服务就绪，再走连接 / Collection / Workspace 流程，
  * 进入工作台后持有固定上下文，并统一维护左树与中间列表共享的当前路径（FE-004）。
  */
@@ -88,7 +95,7 @@ export default function Home() {
   return (
     <div className="flex min-h-svh items-center justify-center bg-muted/40 p-6">
       <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-sm">
-        <h1 className="text-base font-semibold">macTFS</h1>
+        <h1 className="text-base font-semibold">MacTFS</h1>
         <p className="mt-1 text-sm text-muted-foreground">本地源码管理工作台</p>
 
         {phase === "checking" && (
