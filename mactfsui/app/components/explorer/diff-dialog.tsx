@@ -126,6 +126,7 @@ export function DiffDialog({
     let diffEditor: MonacoEditor.IStandaloneDiffEditor | null = null
     let originalModel: MonacoEditor.ITextModel | null = null
     let modifiedModel: MonacoEditor.ITextModel | null = null
+    let themeObserver: MutationObserver | null = null
     void (async () => {
       const { monaco, detectLanguage } = await import("~/lib/monaco")
       if (disposed || !containerRef.current) {
@@ -167,10 +168,16 @@ export function DiffDialog({
         setBlockCount(diffEditor?.getLineChanges()?.length ?? 0)
       })
       editorRef.current = diffEditor
+      // 弹窗打开期间应用切换明暗主题时，同步更新 Monaco 主题。
+      themeObserver = new MutationObserver(() => {
+        monaco.editor.setTheme(isDarkTheme() ? "mactfs-dark" : "mactfs-light")
+      })
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
     })()
     return () => {
       disposed = true
       editorRef.current = null
+      themeObserver?.disconnect()
       diffEditor?.dispose()
       originalModel?.dispose()
       modifiedModel?.dispose()

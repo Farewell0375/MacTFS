@@ -157,6 +157,15 @@
     }
 }
 
+/* 主题切换瞬间的全局颜色过渡，由 use-theme 短暂挂载 theme-transition class。 */
+.theme-transition,
+.theme-transition * {
+    transition:
+        background-color 250ms var(--ease-out-quart),
+        border-color 250ms var(--ease-out-quart),
+        color 250ms var(--ease-out-quart) !important;
+}
+
 /* vibrancy 模式（FE-027 在 macOS Electron 下挂载）：页面底透明，毛玻璃从半透明侧栏透出 */
 html.vibrancy,
 html.vibrancy body {

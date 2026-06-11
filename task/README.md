@@ -31,10 +31,10 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 32 | 34 | 94% |
+| Frontend | 33 | 34 | 97% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 56 | 67 | 84% |
+| Overall | 57 | 67 | 85% |
 
 ## 当前阶段
 
@@ -46,7 +46,7 @@ UI 风格改版·macOS 原生风方案（分支 `feature/ui-macos-restyle`，FE-
 
 ## 下一步任务
 
-- [FE-033-明暗主题跟随系统.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-033-明暗主题跟随系统.md)
+- [FE-034-UI改版回归验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-034-UI改版回归验收.md)
 - UI 改版完成后再回到 [FEATURE-001-连接与目录浏览端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/feature/FEATURE-001-连接与目录浏览端到端验收.md)（需要真实 TFS 环境）
 
 ## Core
@@ -124,7 +124,7 @@ UI 风格改版·macOS 原生风方案（分支 `feature/ui-macos-restyle`，FE-
 | [FE-030-目录树与文件列表精致化.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-030-目录树与文件列表精致化.md) | done | P0 |
 | [FE-031-弹窗体系统一macOS风格.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-031-弹窗体系统一macOS风格.md) | done | P1 |
 | [FE-032-操作反馈与微交互.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-032-操作反馈与微交互.md) | done | P1 |
-| [FE-033-明暗主题跟随系统.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-033-明暗主题跟随系统.md) | todo | P1 |
+| [FE-033-明暗主题跟随系统.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-033-明暗主题跟随系统.md) | done | P1 |
 | [FE-034-UI改版回归验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-034-UI改版回归验收.md) | todo | P0 |
 
 ## Feature E2E

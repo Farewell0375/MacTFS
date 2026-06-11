@@ -1,11 +1,19 @@
-import { FolderCog, PanelBottom, PanelLeft, PanelRight, Unplug } from "lucide-react"
+import { FolderCog, Monitor, Moon, PanelBottom, PanelLeft, PanelRight, Sun, Unplug } from "lucide-react"
 
 import { Button } from "~/components/ui/button"
 import { Separator } from "~/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip"
+import { useTheme, type ThemePreference } from "~/hooks/use-theme"
 import { isMacElectron } from "~/lib/platform"
 import type { WorkspaceSession } from "~/lib/tfs/session"
 import { cn } from "~/lib/utils"
+
+// 主题三态对应的图标与说明文案。
+const THEME_VISUALS: Record<ThemePreference, { icon: typeof Monitor; label: string }> = {
+  system: { icon: Monitor, label: "主题：跟随系统" },
+  light: { icon: Sun, label: "主题：亮色" },
+  dark: { icon: Moon, label: "主题：暗色" },
+}
 
 // 三个可折叠面板的显隐状态，由 WorkspaceShell 持有。
 export interface PanelVisibility {
@@ -33,6 +41,9 @@ export function TopBar({
 }) {
   // 隐藏式标题栏下顶栏整体作为拖拽区，并为左上角红绿灯预留空间。
   const macInset = isMacElectron()
+  const theme = useTheme()
+  const themeVisual = THEME_VISUALS[theme.preference]
+  const ThemeIcon = themeVisual.icon
   return (
     <header
       className={cn(
@@ -80,6 +91,14 @@ export function TopBar({
           <PanelBottom />
         </PanelToggle>
         <Separator orientation="vertical" className="mx-1 h-4!" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button size="icon-sm" variant="ghost" onClick={theme.cycle} aria-label={themeVisual.label}>
+              <ThemeIcon />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{themeVisual.label}（点击切换）</TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button size="icon-sm" variant="ghost" onClick={onManageWorkspace} aria-label="工作区与映射管理">
