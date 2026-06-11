@@ -7,6 +7,7 @@ import { FileViewDialog } from "~/components/explorer/file-view-dialog"
 import { GetVersionDialog } from "~/components/explorer/get-version-dialog"
 import { HistoryDialog } from "~/components/explorer/history-dialog"
 import { MappingDialog } from "~/components/explorer/mapping-dialog"
+import { MergeDialog } from "~/components/explorer/merge-dialog"
 import { PropertiesDialog } from "~/components/explorer/properties-dialog"
 import { RenameDialog } from "~/components/explorer/rename-dialog"
 import type { WorkspaceDialogState } from "~/hooks/use-file-actions"
@@ -30,6 +31,7 @@ export function WorkspaceDialogs({
   onRenameConfirmed,
   onRollback,
   onBranchConfirmed,
+  onMergeConfirmed,
 }: {
   dialog: WorkspaceDialogState
   mappings: MappingInfo[]
@@ -43,6 +45,11 @@ export function WorkspaceDialogs({
   onRenameConfirmed: (serverPath: string, newName: string) => Promise<boolean>
   onRollback: (serverPath: string, mode: "single" | "toVersion", changeset: number) => Promise<boolean>
   onBranchConfirmed: (
+    sourceServerPath: string,
+    targetServerPath: string,
+    changeset: number | undefined,
+  ) => Promise<boolean>
+  onMergeConfirmed: (
     sourceServerPath: string,
     targetServerPath: string,
     changeset: number | undefined,
@@ -122,6 +129,17 @@ export function WorkspaceDialogs({
           mappings={mappings}
           onConfirm={(targetServerPath, changeset) =>
             onBranchConfirmed(dialog.serverPath, targetServerPath, changeset)
+          }
+          onClose={onClose}
+        />
+      )
+    case "merge":
+      return (
+        <MergeDialog
+          sourceServerPath={dialog.serverPath}
+          mappings={mappings}
+          onMerge={(targetServerPath, changeset) =>
+            onMergeConfirmed(dialog.serverPath, targetServerPath, changeset)
           }
           onClose={onClose}
         />

@@ -154,6 +154,7 @@ export function WorkspaceShell({
           onRenameConfirmed={actions.handleRenameConfirmed}
           onRollback={actions.runRollback}
           onBranchConfirmed={actions.handleBranchConfirmed}
+          onMergeConfirmed={actions.handleMergeConfirmed}
         />
 
         {manageOpen && (

@@ -182,6 +182,20 @@ export function branch(body: { sourceServerPath: string; targetServerPath: strin
 }
 
 /**
+ * 查询源 → 目标的待合并变更集候选列表。
+ */
+export function mergeCandidates(params: { sourceServerPath: string; targetServerPath: string }) {
+  return apiClient.get<{ candidates: HistoryEntry[] }>("/api/files/merge-candidates", { query: params })
+}
+
+/**
+ * 合并：源 → 目标（产生挂起更改，冲突走冲突处理），changeset 缺省为合并全部候选。
+ */
+export function merge(body: { sourceServerPath: string; targetServerPath: string; changeset?: number }) {
+  return apiClient.post<{ result: GetLatestResult }>("/api/files/merge", { body })
+}
+
+/**
  * 读取当前 Workspace 的挂起更改。
  */
 export function getPendingChanges(params: { serverPath?: string } = {}) {

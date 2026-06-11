@@ -447,6 +447,30 @@ public class MacTfsServer {
             }
         }));
 
+        Spark.get("/api/files/merge-candidates", (request, response) -> handle(request, response, "mergeCandidates", TIMEOUT_HISTORY_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                AppConfig config = requestConfig(new LinkedHashMap<String, Object>());
+                CoreOperationResult<List<TfsHistoryEntry>> result = coreService.mergeCandidates(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(request.queryParams("sourceServerPath"), "sourceServerPath"), require(request.queryParams("targetServerPath"), "targetServerPath"));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("candidates", result.getData() == null ? Collections.emptyList() : result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
+        Spark.post("/api/files/merge", (request, response) -> handle(request, response, "merge", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                Number changeset = (Number) body.get("changeset");
+                CoreOperationResult<TfsGetLatestResult> result = coreService.merge(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "sourceServerPath"), "sourceServerPath"), require(stringValue(body, "targetServerPath"), "targetServerPath"), changeset == null ? null : Integer.valueOf(changeset.intValue()));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("result", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
         Spark.post("/api/files/branch", (request, response) -> handle(request, response, "branch", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {

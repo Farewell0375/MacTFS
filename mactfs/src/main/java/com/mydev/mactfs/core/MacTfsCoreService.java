@@ -13,6 +13,7 @@ import com.microsoft.tfs.core.clients.framework.location.ConnectOptions;
 import com.microsoft.tfs.core.clients.versioncontrol.GetItemsOptions;
 import com.microsoft.tfs.core.clients.versioncontrol.GetOptions;
 import com.microsoft.tfs.core.clients.versioncontrol.GetStatus;
+import com.microsoft.tfs.core.clients.versioncontrol.MergeFlags;
 import com.microsoft.tfs.core.clients.versioncontrol.PendChangesOptions;
 import com.microsoft.tfs.core.clients.versioncontrol.RollbackOptions;
 import com.microsoft.tfs.core.clients.versioncontrol.VersionControlClient;
@@ -31,6 +32,7 @@ import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.Item;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.ItemSet;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.ItemType;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.LockLevel;
+import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.MergeCandidate;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.PendingChange;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.PendingSet;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.RecursionType;
@@ -419,6 +421,71 @@ public class MacTfsCoreService {
                 int affected = workspace.pendBranch(source, target, version, LockLevel.NONE, RecursionType.FULL, GetOptions.NONE, PendChangesOptions.NONE);
                 logs.add("Branch pended: " + source + " -> " + target);
                 return new TfsFileOperationResult("branch", affected, Collections.<String>emptyList());
+            }
+        });
+    }
+
+    /**
+     * 查询源 → 目标的待合并变更集候选列表（对应 VS Merge 向导的候选页）。
+     */
+    public CoreOperationResult<List<TfsHistoryEntry>> mergeCandidates(final TfsConnectionConfig config,
+                                                                      final String collectionName,
+                                                                      final String workspaceName,
+                                                                      final String sourceServerPath,
+                                                                      final String targetServerPath) {
+        return execute("mergeCandidates", new CoreCallable<List<TfsHistoryEntry>>() {
+            @Override
+            public List<TfsHistoryEntry> call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                String source = normalizeServerPath(require(sourceServerPath, "sourceServerPath"));
+                String target = normalizeServerPath(require(targetServerPath, "targetServerPath"));
+                MergeCandidate[] candidates = workspace.getMergeCandidates(source, target, RecursionType.FULL, MergeFlags.NONE);
+                List<TfsHistoryEntry> result = new ArrayList<TfsHistoryEntry>();
+                if (candidates != null) {
+                    for (MergeCandidate candidate : candidates) {
+                        Changeset changeset = candidate.getChangeset();
+                        if (changeset == null) {
+                            continue;
+                        }
+                        result.add(new TfsHistoryEntry(
+                            source,
+                            nameOf(source),
+                            candidate.isPartial() ? "partial merge" : "merge",
+                            "",
+                            changeset.getChangesetID(),
+                            emptyToDefault(changeset.getOwnerDisplayName(), changeset.getOwner()),
+                            changeset.getDate() == null ? null : Long.valueOf(changeset.getDate().getTimeInMillis()),
+                            changeset.getComment()
+                        ));
+                    }
+                }
+                logs.add("Merge candidates: " + result.size());
+                return result;
+            }
+        });
+    }
+
+    /**
+     * 合并：把源分支的改动合并到目标分支（产生挂起更改，冲突走冲突处理）。
+     * changesetId 为 null 时合并全部候选，否则仅合并该变更集。
+     */
+    public CoreOperationResult<TfsGetLatestResult> merge(final TfsConnectionConfig config,
+                                                         final String collectionName,
+                                                         final String workspaceName,
+                                                         final String sourceServerPath,
+                                                         final String targetServerPath,
+                                                         final Integer changesetId) {
+        return execute("merge", new CoreCallable<TfsGetLatestResult>() {
+            @Override
+            public TfsGetLatestResult call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                String source = normalizeServerPath(require(sourceServerPath, "sourceServerPath"));
+                String target = normalizeServerPath(require(targetServerPath, "targetServerPath"));
+                VersionSpec from = changesetId == null ? null : new ChangesetVersionSpec(changesetId.intValue());
+                VersionSpec to = changesetId == null ? LatestVersionSpec.INSTANCE : new ChangesetVersionSpec(changesetId.intValue());
+                GetStatus status = workspace.merge(source, target, from, to, LockLevel.NONE, RecursionType.FULL, MergeFlags.NONE);
+                logs.add("Merge " + source + " -> " + target + " operations=" + status.getNumOperations() + " conflicts=" + status.getNumConflicts());
+                return toGetLatestResult(status);
             }
         });
     }

@@ -31,16 +31,14 @@ blocked
 | Core | 12 | 12 | 100% |
 | Server API | 10 | 10 | 100% |
 | CLI | 2 | 2 | 100% |
-| Frontend | 23 | 24 | 96% |
+| Frontend | 24 | 24 | 100% |
 | Feature E2E | 0 | 5 | 0% |
 | Release | 0 | 4 | 0% |
-| Overall | 47 | 57 | 82% |
+| Overall | 48 | 57 | 84% |
 
 ## 当前阶段
 
-前端增强第二批（FE-019 ~ FE-024，需求见
-[mactfs-ui-enhancement-requirements-2.md](/Users/fenghp/Desktop/DEV/project/mydev/docs/mactfs-ui-enhancement-requirements-2.md)）
-+ Feature E2E（需要真实 TFS 环境）
+Feature E2E（前端含两批增强 FE-001 ~ FE-024 已全部完成，需要真实 TFS 环境）
 
 ## 前端规范
 
@@ -48,7 +46,6 @@ blocked
 
 ## 下一步任务
 
-- [FE-024-实现合并.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-024-实现合并.md)
 - [FEATURE-001-连接与目录浏览端到端验收.md](/Users/fenghp/Desktop/DEV/project/mydev/task/feature/FEATURE-001-连接与目录浏览端到端验收.md)（需要真实 TFS 环境）
 
 ## Core
@@ -117,7 +114,7 @@ blocked
 | [FE-021-实现变更集回滚.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-021-实现变更集回滚.md) | done | P1 |
 | [FE-022-实现工作区与Mapping集中管理.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-022-实现工作区与Mapping集中管理.md) | done | P1 |
 | [FE-023-实现分支.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-023-实现分支.md) | done | P1 |
-| [FE-024-实现合并.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-024-实现合并.md) | todo | P1 |
+| [FE-024-实现合并.md](/Users/fenghp/Desktop/DEV/project/mydev/task/frontend/FE-024-实现合并.md) | done | P1 |
 
 ## Feature E2E
 

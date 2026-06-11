@@ -18,6 +18,7 @@ export type WorkspaceDialogState =
   | { kind: "getVersion"; serverPath: string; folder: boolean }
   | { kind: "rename"; serverPath: string; folder: boolean }
   | { kind: "branch"; serverPath: string }
+  | { kind: "merge"; serverPath: string }
   | null
 
 // 顶部细条通知：信息（操作摘要）或错误。
@@ -263,6 +264,9 @@ export function useFileActions({
         case "branch":
           setDialog({ kind: "branch", serverPath: target.serverPath })
           break
+        case "merge":
+          setDialog({ kind: "merge", serverPath: target.serverPath })
+          break
         case "checkout":
           setActionBusy(true)
           setNotice({ kind: "info", text: "正在签出…" })
@@ -429,6 +433,47 @@ export function useFileActions({
   )
 
   /**
+   * 合并确认后执行：产生挂起更改并刷新，冲突自动进入冲突弹窗（针对目标路径）。
+   */
+  const handleMergeConfirmed = useCallback(
+    async (
+      sourceServerPath: string,
+      targetServerPath: string,
+      changeset: number | undefined,
+    ): Promise<boolean> => {
+      setNotice({
+        kind: "info",
+        text: changeset == null ? "正在合并全部候选变更集…" : `正在合并变更集 C${changeset}…`,
+      })
+      const result = await api.merge({ sourceServerPath, targetServerPath, changeset })
+      refreshLogs()
+      if (!result.ok || !result.data) {
+        setNotice({ kind: "error", text: result.errorMessage ?? "合并失败" })
+        return false
+      }
+      const summary = result.data.result
+      const parts = [`产生挂起更改 ${summary.operations} 项`]
+      if (summary.conflicts > 0) {
+        parts.push(`冲突 ${summary.conflicts} 项`)
+      }
+      if (summary.failures > 0) {
+        parts.push(`失败 ${summary.failures} 项`)
+      }
+      setNotice({
+        kind: summary.conflicts > 0 || summary.failures > 0 ? "error" : "info",
+        text: `合并完成：${parts.join("，")}，请在挂起更改面板审查后签入`,
+      })
+      await refreshPendingChanges()
+      refreshItems()
+      if (summary.conflicts > 0) {
+        setDialog({ kind: "conflicts", serverPath: targetServerPath })
+      }
+      return true
+    },
+    [refreshItems, refreshLogs, refreshPendingChanges],
+  )
+
+  /**
    * 强制获取确认后执行：覆盖本地并关闭确认弹窗。
    */
   const handleForceGetConfirmed = useCallback(
@@ -463,6 +508,7 @@ export function useFileActions({
     handleForceGetConfirmed,
     handleRenameConfirmed,
     handleBranchConfirmed,
+    handleMergeConfirmed,
     runGetVersion,
     runRollback,
   }

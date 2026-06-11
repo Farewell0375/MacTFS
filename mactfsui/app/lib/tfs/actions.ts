@@ -43,6 +43,7 @@ export type FileActionId =
   | "viewFile"
   | "diffLocalLatest"
   | "branch"
+  | "merge"
   | "properties"
 
 // 单个菜单项：是否可用与置灰原因。
@@ -184,6 +185,7 @@ function buildFolderMenu(target: FileTarget): FileMenuItem[][] {
     },
     { id: "history", label: "查看历史", enabled: true },
     { id: "branch", label: "分支…", enabled: true },
+    { id: "merge", label: "合并…", enabled: true },
   ])
 
   sections.push(buildAdvancedSection(target))
@@ -303,9 +305,12 @@ function buildFileItemMenu(target: FileTarget): FileMenuItem[][] {
   ]
   sections.push(workspaceActions)
 
-  // pendingAdd 文件服务端尚不存在，不提供分支、属性与获取特定版本。
+  // pendingAdd 文件服务端尚不存在，不提供分支、合并、属性与获取特定版本。
   if (!isPendingAdd) {
-    sections.push([{ id: "branch", label: "分支…", enabled: true }])
+    sections.push([
+      { id: "branch", label: "分支…", enabled: true },
+      { id: "merge", label: "合并…", enabled: true },
+    ])
     sections.push(buildAdvancedSection(target))
   }
 
