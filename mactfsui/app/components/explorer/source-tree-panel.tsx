@@ -129,7 +129,7 @@ export function SourceTreePanel({
   )
 
   return (
-    <aside className="flex h-full w-[280px] shrink-0 flex-col border-r bg-sidebar">
+    <aside className="flex h-full w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border bg-card shadow-card">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b px-3">
         <span className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
           源码目录

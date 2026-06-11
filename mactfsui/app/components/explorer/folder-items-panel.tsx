@@ -128,7 +128,7 @@ export function FolderItemsPanel({
   })
 
   return (
-    <section className="flex h-full min-w-0 flex-1 flex-col bg-background">
+    <section className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-card">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b px-3">
         <span className="shrink-0 text-xs text-muted-foreground">当前路径</span>
         <span className="min-w-0 truncate font-mono text-xs">{selectedServerPath}</span>
@@ -172,7 +172,7 @@ export function FolderItemsPanel({
           </div>
         ) : (
           <Table>
-            <TableHeader className="sticky top-0 z-10 bg-background">
+            <TableHeader className="sticky top-0 z-10 bg-card">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="h-8 text-xs text-muted-foreground">名称</TableHead>
                 <TableHead className="h-8 w-24 text-xs text-muted-foreground">状态</TableHead>

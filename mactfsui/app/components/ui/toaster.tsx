@@ -70,15 +70,34 @@ export function showToast(input: { id?: string; kind: ToastKind; text: string })
   return id
 }
 
-// toast 类型对应的图标与配色。
-const KIND_VISUALS: Record<ToastKind, { icon: typeof CheckCircle2; className: string }> = {
-  success: { icon: CheckCircle2, className: "text-emerald-600 dark:text-emerald-400" },
-  error: { icon: AlertCircle, className: "text-destructive" },
-  loading: { icon: Loader2, className: "animate-spin text-primary" },
+// toast 类型对应的图标、强调条与边框配色：彩色左侧条 + 着色边框提高辨识度。
+const KIND_VISUALS: Record<
+  ToastKind,
+  { icon: typeof CheckCircle2; iconClass: string; barClass: string; borderClass: string }
+> = {
+  success: {
+    icon: CheckCircle2,
+    iconClass: "text-emerald-600 dark:text-emerald-400",
+    barClass: "bg-emerald-500",
+    borderClass: "border-emerald-500/35",
+  },
+  error: {
+    icon: AlertCircle,
+    iconClass: "text-destructive",
+    barClass: "bg-destructive",
+    borderClass: "border-destructive/40",
+  },
+  loading: {
+    icon: Loader2,
+    iconClass: "animate-spin text-primary",
+    barClass: "bg-primary",
+    borderClass: "border-primary/35",
+  },
 }
 
 /**
- * toast 挂载点：固定在窗口右下角，新条目滑入，点击可关闭。
+ * toast 挂载点：固定在窗口右上角（顶栏下方），新条目自上滑入，点击可关闭。
+ * 彩色强调条 + 着色边框 + 毛玻璃底，保证进度与结果提示足够显眼。
  */
 export function Toaster() {
   const [items, setItems] = useState<ToastItem[]>([])
@@ -97,7 +116,7 @@ export function Toaster() {
   }
 
   return (
-    <div className="pointer-events-none fixed right-4 bottom-4 z-[60] flex w-80 flex-col gap-2">
+    <div className="pointer-events-none fixed top-14 right-3 z-[60] flex w-[380px] flex-col gap-2">
       {items.map((item) => {
         const visual = KIND_VISUALS[item.kind]
         const Icon = visual.icon
@@ -106,9 +125,13 @@ export function Toaster() {
             key={item.id}
             type="button"
             onClick={() => dismissToast(item.id)}
-            className="animate-in fade-in slide-in-from-bottom-2 ease-out-quart pointer-events-auto flex items-start gap-2.5 rounded-lg border bg-popover p-3 text-left text-sm shadow-overlay duration-200"
+            className={cn(
+              "animate-in fade-in slide-in-from-top-3 ease-out-quart pointer-events-auto relative flex items-start gap-2.5 overflow-hidden rounded-xl border bg-popover/95 py-3 pr-3.5 pl-4 text-left text-sm font-medium shadow-overlay backdrop-blur-md duration-250",
+              visual.borderClass,
+            )}
           >
-            <Icon className={cn("mt-0.5 size-4 shrink-0", visual.className)} />
+            <span className={cn("absolute inset-y-0 left-0 w-1", visual.barClass)} />
+            <Icon className={cn("mt-0.5 size-4.5 shrink-0", visual.iconClass)} />
             <span className="min-w-0 break-words">{item.text}</span>
           </button>
         )

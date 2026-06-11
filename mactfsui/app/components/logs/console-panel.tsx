@@ -60,7 +60,7 @@ export function ConsolePanel({
   )
 
   return (
-    <footer className="flex h-full flex-col border-t bg-background">
+    <footer className="flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-card">
       <div className="flex h-8 shrink-0 items-center gap-2 border-b px-3">
         <span className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
           操作日志

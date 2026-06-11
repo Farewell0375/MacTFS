@@ -72,7 +72,7 @@ export function WorkspaceShell({
     refreshLogs,
   })
 
-  // 把动作编排的 notice 转成右下角 toast：固定 id 让「正在…」与结果复用同一条目。
+  // 把动作编排的 notice 转成右上角 toast：固定 id 让「正在…」与结果复用同一条目。
   useEffect(() => {
     if (!actions.notice) {
       return
@@ -87,8 +87,8 @@ export function WorkspaceShell({
 
   return (
     <TooltipProvider>
-      {/* Finder 式布局：根容器不铺底色，vibrancy 下毛玻璃从顶栏与左侧栏透出 */}
-      <div className="flex h-svh flex-col overflow-hidden">
+      {/* 毛玻璃画布 + 卡片化面板：半透明画布透出 vibrancy，四个面板为圆角卡片留缝隙 */}
+      <div className="flex h-svh flex-col overflow-hidden bg-sidebar">
         <TopBar
           session={session}
           panels={panels}
@@ -97,12 +97,12 @@ export function WorkspaceShell({
           onManageWorkspace={() => setManageOpen(true)}
         />
 
-        <div className="flex min-h-0 flex-1">
-          {/* 左右面板保持挂载，通过宽度过渡实现折叠 / 展开动画 */}
+        <div className="flex min-h-0 flex-1 px-2 pb-2">
+          {/* 左右面板保持挂载，通过宽度 + 间距过渡实现折叠 / 展开动画 */}
           <div
             className={cn(
-              "flex min-h-0 shrink-0 overflow-hidden transition-[width] duration-250 ease-out-quart",
-              panels.tree ? "w-[280px]" : "w-0",
+              "flex min-h-0 shrink-0 overflow-hidden transition-[width,margin] duration-250 ease-out-quart",
+              panels.tree ? "mr-2 w-[280px]" : "mr-0 w-0",
             )}
           >
             <SourceTreePanel
@@ -124,8 +124,8 @@ export function WorkspaceShell({
           />
           <div
             className={cn(
-              "flex min-h-0 shrink-0 justify-end overflow-hidden transition-[width] duration-250 ease-out-quart",
-              panels.changes ? "w-[340px]" : "w-0",
+              "flex min-h-0 shrink-0 justify-end overflow-hidden transition-[width,margin] duration-250 ease-out-quart",
+              panels.changes ? "ml-2 w-[340px]" : "ml-0 w-0",
             )}
           >
             <ChangesPanel
@@ -146,8 +146,8 @@ export function WorkspaceShell({
         {/* 底部操作台通过高度过渡实现滑入滑出 */}
         <div
           className={cn(
-            "shrink-0 overflow-hidden transition-[height] duration-250 ease-out-quart",
-            panels.console ? "h-[180px]" : "h-0",
+            "box-border shrink-0 overflow-hidden px-2 transition-[height] duration-250 ease-out-quart",
+            panels.console ? "h-[188px] pb-2" : "h-0",
           )}
         >
           <ConsolePanel

@@ -47,7 +47,7 @@ export function TopBar({
   return (
     <header
       className={cn(
-        "app-drag flex h-12 shrink-0 items-center justify-between gap-3 border-b px-3",
+        "app-drag flex h-12 shrink-0 items-center justify-between gap-3 px-3",
         macInset && "pl-20",
       )}
     >
