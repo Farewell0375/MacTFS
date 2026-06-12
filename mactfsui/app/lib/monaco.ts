@@ -54,34 +54,6 @@ monaco.editor.defineTheme("mactfs-light", {
   },
 })
 
-monaco.editor.defineTheme("mactfs-dark", {
-  base: "vs-dark",
-  inherit: true,
-  rules: [],
-  colors: {
-    "editor.background": "#1b1b1b",
-    "editor.foreground": "#fafafa",
-    "editor.lineHighlightBackground": "#ffffff08",
-    "editorLineNumber.foreground": "#6b6b6b",
-    "editorLineNumber.activeForeground": "#a3a3a3",
-    "editorCursor.foreground": "#818cf8",
-    "focusBorder": "#00000000",
-    "diffEditor.insertedTextBackground": "#22c55e30",
-    "diffEditor.insertedLineBackground": "#22c55e17",
-    "diffEditor.removedTextBackground": "#ef444430",
-    "diffEditor.removedLineBackground": "#ef444417",
-    "diffEditorGutter.insertedLineBackground": "#22c55e24",
-    "diffEditorGutter.removedLineBackground": "#ef444424",
-    "diffEditorOverview.insertedForeground": "#22c55e99",
-    "diffEditorOverview.removedForeground": "#ef444499",
-    "diffEditor.unchangedRegionBackground": "#222222",
-    "diffEditor.unchangedRegionForeground": "#9c9c9c",
-    "scrollbarSlider.background": "#ffffff1f",
-    "scrollbarSlider.hoverBackground": "#ffffff33",
-    "scrollbarSlider.activeBackground": "#ffffff40",
-  },
-})
-
 /**
  * 按文件路径后缀匹配 Monaco 已注册语言，匹配不到时回退纯文本。
  */

@@ -185,7 +185,7 @@ export function WorkspaceManageDialog({
                         ) : (
                           <Badge
                             variant="secondary"
-                            className="bg-red-500/10 text-red-700 dark:text-red-400"
+                            className="bg-red-500/10 text-red-700"
                           >
                             不存在
                           </Badge>

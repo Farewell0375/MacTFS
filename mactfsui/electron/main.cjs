@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage, nativeTheme } = require("electron")
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage } = require("electron")
 const path = require("node:path")
 const fs = require("node:fs")
 const os = require("node:os")
@@ -290,11 +290,7 @@ function createWindow() {
     title: "MacTFS",
     // 预设背景并延迟显示，避免启动白闪；macOS 下背景透明以透出 vibrancy 毛玻璃。
     show: false,
-    backgroundColor: isMac
-      ? "#00000000"
-      : nativeTheme.shouldUseDarkColors
-        ? "#222226"
-        : "#f9f9fa",
+    backgroundColor: isMac ? "#00000000" : "#f9f9fa",
     // macOS 隐藏系统标题栏 + 窗口级毛玻璃材质；其它平台回退系统标题栏与实色背景。
     ...(isMac
       ? {

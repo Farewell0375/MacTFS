@@ -167,7 +167,7 @@ export function ConflictDialog({
           </DialogHeader>
 
           <div className="flex shrink-0 items-center gap-2">
-            <Badge variant="secondary" className="rounded-md bg-red-500/10 text-red-700 dark:text-red-400">
+            <Badge variant="secondary" className="rounded-md bg-red-500/10 text-red-700">
               {conflicts.length} 个冲突
             </Badge>
             <span className="text-xs text-muted-foreground">

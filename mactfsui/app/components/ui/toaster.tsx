@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
+import { Check, Loader2, X } from "lucide-react"
 
 import { cn } from "~/lib/utils"
 
@@ -70,34 +70,15 @@ export function showToast(input: { id?: string; kind: ToastKind; text: string })
   return id
 }
 
-// toast 类型对应的图标、强调条与边框配色：彩色左侧条 + 着色边框提高辨识度。
-const KIND_VISUALS: Record<
-  ToastKind,
-  { icon: typeof CheckCircle2; iconClass: string; barClass: string; borderClass: string }
-> = {
-  success: {
-    icon: CheckCircle2,
-    iconClass: "text-emerald-600 dark:text-emerald-400",
-    barClass: "bg-emerald-500",
-    borderClass: "border-emerald-500/35",
-  },
-  error: {
-    icon: AlertCircle,
-    iconClass: "text-destructive",
-    barClass: "bg-destructive",
-    borderClass: "border-destructive/40",
-  },
-  loading: {
-    icon: Loader2,
-    iconClass: "animate-spin text-primary",
-    barClass: "bg-primary",
-    borderClass: "border-primary/35",
-  },
+// toast 类型对应的状态徽标：macOS 通知风的彩色小圆徽（成功绿 / 失败红），loading 用旋转图标。
+const KIND_BADGES: Record<"success" | "error", { icon: typeof Check; chipClass: string }> = {
+  success: { icon: Check, chipClass: "bg-emerald-500" },
+  error: { icon: X, chipClass: "bg-destructive" },
 }
 
 /**
  * toast 挂载点：固定在窗口右上角（顶栏下方），新条目自上滑入，点击可关闭。
- * 彩色强调条 + 着色边框 + 毛玻璃底，保证进度与结果提示足够显眼。
+ * 视觉对齐 macOS 系统通知：白色毛玻璃圆角卡片 + 彩色状态圆徽 + 柔和投影，无彩色边框。
  */
 export function Toaster() {
   const [items, setItems] = useState<ToastItem[]>([])
@@ -116,26 +97,42 @@ export function Toaster() {
   }
 
   return (
-    <div className="pointer-events-none fixed top-14 right-3 z-[60] flex w-[380px] flex-col gap-2">
-      {items.map((item) => {
-        const visual = KIND_VISUALS[item.kind]
-        const Icon = visual.icon
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => dismissToast(item.id)}
-            className={cn(
-              "animate-in fade-in slide-in-from-top-3 ease-out-quart pointer-events-auto relative flex items-start gap-2.5 overflow-hidden rounded-xl border bg-popover/95 py-3 pr-3.5 pl-4 text-left text-sm font-medium shadow-overlay backdrop-blur-md duration-250",
-              visual.borderClass,
-            )}
-          >
-            <span className={cn("absolute inset-y-0 left-0 w-1", visual.barClass)} />
-            <Icon className={cn("mt-0.5 size-4.5 shrink-0", visual.iconClass)} />
-            <span className="min-w-0 break-words">{item.text}</span>
-          </button>
-        )
-      })}
+    <div className="pointer-events-none fixed top-14 right-4 z-[60] flex flex-col items-end gap-2.5">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => dismissToast(item.id)}
+          className="animate-in fade-in slide-in-from-top-2 ease-out-quart pointer-events-auto flex w-fit max-w-[360px] min-w-[200px] items-center gap-2.5 rounded-xl border border-black/8 bg-popover/90 py-2.5 pr-4 pl-3 text-left shadow-[0_8px_24px_rgb(0_0_0/0.12),0_2px_6px_rgb(0_0_0/0.06)] backdrop-blur-xl duration-300"
+        >
+          {item.kind === "loading" ? (
+            <Loader2 className="size-4.5 shrink-0 animate-spin text-primary" />
+          ) : (
+            <ToastBadge kind={item.kind} />
+          )}
+          <span className="min-w-0 text-[13px] leading-snug font-medium break-words text-foreground">
+            {item.text}
+          </span>
+        </button>
+      ))}
     </div>
+  )
+}
+
+/**
+ * 成功 / 失败的彩色圆形徽标：实色圆底 + 白色粗描边图标。
+ */
+function ToastBadge({ kind }: { kind: "success" | "error" }) {
+  const badge = KIND_BADGES[kind]
+  const Icon = badge.icon
+  return (
+    <span
+      className={cn(
+        "flex size-5 shrink-0 items-center justify-center rounded-full",
+        badge.chipClass,
+      )}
+    >
+      <Icon className="size-3 text-white" strokeWidth={3.2} />
+    </span>
   )
 }

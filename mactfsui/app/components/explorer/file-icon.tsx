@@ -21,42 +21,42 @@ const FILE_ICON_RULES: { exts: string[]; icon: LucideIcon; className: string }[]
   {
     exts: ["ts", "tsx", "js", "jsx", "java", "cs", "py", "go", "rs", "c", "cpp", "h", "vue", "css", "scss", "html"],
     icon: FileCode,
-    className: "text-blue-600 dark:text-blue-400",
+    className: "text-blue-600",
   },
   {
     exts: ["json", "xml", "yml", "yaml", "toml", "config", "properties", "gradle"],
     icon: FileJson,
-    className: "text-amber-600 dark:text-amber-400",
+    className: "text-amber-600",
   },
   {
     exts: ["md", "txt", "doc", "docx", "pdf", "rtf"],
     icon: FileText,
-    className: "text-zinc-500 dark:text-zinc-400",
+    className: "text-zinc-500",
   },
   {
     exts: ["sql", "db"],
     icon: Database,
-    className: "text-violet-600 dark:text-violet-400",
+    className: "text-violet-600",
   },
   {
     exts: ["png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "icns"],
     icon: FileImage,
-    className: "text-emerald-600 dark:text-emerald-400",
+    className: "text-emerald-600",
   },
   {
     exts: ["zip", "rar", "7z", "tar", "gz", "jar"],
     icon: FileArchive,
-    className: "text-orange-600 dark:text-orange-400",
+    className: "text-orange-600",
   },
   {
     exts: ["xls", "xlsx", "csv"],
     icon: FileSpreadsheet,
-    className: "text-green-600 dark:text-green-400",
+    className: "text-green-600",
   },
   {
     exts: ["sh", "bat", "cmd", "ps1", "zsh"],
     icon: FileTerminal,
-    className: "text-zinc-600 dark:text-zinc-300",
+    className: "text-zinc-600",
   },
 ]
 
@@ -91,7 +91,7 @@ export function FileIcon({
       <Icon
         className={cn(
           "size-3.5 shrink-0",
-          mapped ? "text-primary" : "text-sky-600 dark:text-sky-400",
+          mapped ? "text-primary" : "text-sky-600",
           className,
         )}
       />

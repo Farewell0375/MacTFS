@@ -47,13 +47,6 @@ function splitDiffSides(raw: string[]): { original: string; modified: string } {
 }
 
 /**
- * 判断当前应用是否处于暗色主题（class 方案），用于选择 Monaco 主题。
- */
-function isDarkTheme(): boolean {
-  return typeof document !== "undefined" && document.documentElement.classList.contains("dark")
-}
-
-/**
  * 文本 Diff 弹窗：基于 Monaco DiffEditor 渲染，支持 本地 vs 服务器 latest
  * 与 两个历史版本 对比。提供统一 / 左右分栏视图、上一处 / 下一处差异导航、
  * 仅看差异（折叠未变动区域）、搜索（Cmd+F）、字级高亮与语法着色。
@@ -126,7 +119,6 @@ export function DiffDialog({
     let diffEditor: MonacoEditor.IStandaloneDiffEditor | null = null
     let originalModel: MonacoEditor.ITextModel | null = null
     let modifiedModel: MonacoEditor.ITextModel | null = null
-    let themeObserver: MutationObserver | null = null
     void (async () => {
       const { monaco, detectLanguage } = await import("~/lib/monaco")
       if (disposed || !containerRef.current) {
@@ -144,7 +136,7 @@ export function DiffDialog({
         // 统一视图下隐藏旧版行号列，避免出现两列紧贴的行号。
         compactMode: viewMode === "unified",
         hideUnchangedRegions: { enabled: onlyChanges },
-        theme: isDarkTheme() ? "mactfs-dark" : "mactfs-light",
+        theme: "mactfs-light",
         fontSize: 12,
         lineHeight: 20,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace',
@@ -168,16 +160,10 @@ export function DiffDialog({
         setBlockCount(diffEditor?.getLineChanges()?.length ?? 0)
       })
       editorRef.current = diffEditor
-      // 弹窗打开期间应用切换明暗主题时，同步更新 Monaco 主题。
-      themeObserver = new MutationObserver(() => {
-        monaco.editor.setTheme(isDarkTheme() ? "mactfs-dark" : "mactfs-light")
-      })
-      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
     })()
     return () => {
       disposed = true
       editorRef.current = null
-      themeObserver?.disconnect()
       diffEditor?.dispose()
       originalModel?.dispose()
       modifiedModel?.dispose()
@@ -257,10 +243,10 @@ export function DiffDialog({
         <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs">
           {diff && (
             <>
-              <Badge variant="secondary" className="rounded-md bg-red-500/10 text-red-700 dark:text-red-400">
+              <Badge variant="secondary" className="rounded-md bg-red-500/10 text-red-700">
                 − {diff.sourceLabel}
               </Badge>
-              <Badge variant="secondary" className="rounded-md bg-green-500/10 text-green-700 dark:text-green-400">
+              <Badge variant="secondary" className="rounded-md bg-green-500/10 text-green-700">
                 + {diff.targetLabel}
               </Badge>
               <span className="text-muted-foreground">{changedCount} 行差异</span>

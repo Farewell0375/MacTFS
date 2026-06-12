@@ -16,10 +16,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        {/* 首屏前标记 vibrancy 环境并应用主题偏好，避免暗色闪白 */}
+        {/* 首屏前标记 vibrancy 环境（macOS Electron 下透出窗口毛玻璃） */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var ua=navigator.userAgent;if(ua.includes("Electron")&&ua.includes("Macintosh"))document.documentElement.classList.add("vibrancy");var t=localStorage.getItem("mactfs.theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.classList.add("dark")}catch(e){}})()`,
+            __html: `(function(){try{var ua=navigator.userAgent;if(ua.includes("Electron")&&ua.includes("Macintosh"))document.documentElement.classList.add("vibrancy")}catch(e){}})()`,
           }}
         />
         <Meta />
