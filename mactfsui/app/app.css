@@ -55,7 +55,7 @@
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
     /* 阴影分层：卡片极轻 / 浮层轻 / 弹窗（Sheet）明显 */
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05);
+    --shadow-card: 0 0 0 0.5px rgb(0 0 0 / 0.03), 0 1px 1px rgb(0 0 0 / 0.04), 0 4px 14px rgb(0 0 0 / 0.06);
     --shadow-overlay: 0 4px 16px rgb(0 0 0 / 0.1), 0 1px 3px rgb(0 0 0 / 0.06);
     --shadow-dialog: 0 18px 50px rgb(0 0 0 / 0.22), 0 4px 12px rgb(0 0 0 / 0.1);
     /* 缓动曲线 */
@@ -129,6 +129,11 @@
 html.vibrancy,
 html.vibrancy body {
     background: transparent;
+}
+
+/* 工作台画布底色：比卡片深一档的中性灰，让白色卡片浮起；vibrancy 下半透明透出窗口毛玻璃。 */
+@utility canvas-surface {
+  background-color: oklch(0.934 0.004 286 / 0.85);
 }
 
 /* 隐藏式标题栏下的窗口拖拽区域：顶栏整体可拖动，交互控件单独豁免。 */

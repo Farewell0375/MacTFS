@@ -16,7 +16,9 @@ function ScrollArea({
     >
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
-        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+        // Radix 默认给内容包一层 display:table + min-width:100% 的 div，会让内容按
+        // 自身宽度撑开导致 truncate 失效、文字被面板边缘硬切；改为 block 占满视口宽度。
+        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 [&>div]:block! [&>div]:w-full [&>div]:min-w-0!"
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

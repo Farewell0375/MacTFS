@@ -15,8 +15,8 @@ export interface PanelVisibility {
 }
 
 /**
- * 顶部上下文栏：展示固定的 Server / Collection / Workspace 上下文，
- * 以及面板折叠开关与重新连接入口，不承载对象级操作。
+ * 顶部上下文栏：仿 Finder 的居中上下文胶囊展示 Collection / Workspace
+ * （悬停查看服务器地址），右侧为面板折叠开关与重新连接入口，不承载对象级操作。
  */
 export function TopBar({
   session,
@@ -40,21 +40,26 @@ export function TopBar({
         macInset && "pl-20",
       )}
     >
-      <div className="flex min-w-0 items-center gap-2 text-sm">
-        <span className="shrink-0 font-semibold">MacTFS</span>
-        <Separator orientation="vertical" className="h-4!" />
-        <span className="hidden shrink-0 text-xs text-muted-foreground lg:inline">
-          服务器
-        </span>
-        <span className="hidden max-w-56 truncate font-mono text-xs lg:inline">
-          {session.serverUri}
-        </span>
-        <Separator orientation="vertical" className="hidden h-4! lg:block" />
-        <span className="shrink-0 text-xs text-muted-foreground">Collection</span>
-        <span className="max-w-40 truncate text-xs font-medium">{session.collection}</span>
-        <Separator orientation="vertical" className="h-4!" />
-        <span className="shrink-0 text-xs text-muted-foreground">Workspace</span>
-        <span className="max-w-44 truncate font-mono text-xs">{session.workspace}</span>
+      {/* 左侧：程序名 + Collection 胶囊；服务器地址与工作区收进悬停提示 */}
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span className="shrink-0 text-sm font-medium">MacTFS</span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="app-no-drag flex h-7 min-w-0 items-center rounded-lg bg-foreground/5 px-3 text-xs text-muted-foreground transition-colors hover:bg-foreground/8 hover:text-foreground">
+              <span className="truncate">{session.collection}</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="text-xs">
+            <div className="space-y-0.5">
+              <p>
+                服务器 <span className="font-mono">{session.serverUri}</span>
+              </p>
+              <p>
+                工作区 <span className="font-mono">{session.workspace}</span>
+              </p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <div className="app-no-drag flex shrink-0 items-center gap-1">

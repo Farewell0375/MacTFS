@@ -130,7 +130,7 @@ export function SourceTreePanel({
 
   return (
     <aside className="flex h-full w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border bg-card shadow-card">
-      <div className="flex h-9 shrink-0 items-center gap-2 border-b px-3">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-b bg-muted/40 px-3">
         <span className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
           源码目录
         </span>
@@ -216,6 +216,7 @@ function TreeNode({
             isSelected ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60",
           )}
           style={{ paddingLeft: `${depth * 14 + 2}px` }}
+          title={path}
         >
           <span className="flex size-5 shrink-0 items-center justify-center">
             {isLoading ? (

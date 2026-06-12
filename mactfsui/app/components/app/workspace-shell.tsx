@@ -88,7 +88,7 @@ export function WorkspaceShell({
   return (
     <TooltipProvider>
       {/* 毛玻璃画布 + 卡片化面板：半透明画布透出 vibrancy，四个面板为圆角卡片留缝隙 */}
-      <div className="flex h-svh flex-col overflow-hidden bg-sidebar">
+      <div className="canvas-surface flex h-svh flex-col overflow-hidden">
         <TopBar
           session={session}
           panels={panels}
