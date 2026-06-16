@@ -35,7 +35,6 @@ task runServer(type: JavaExec) {
     description = 'Start the macTFS local API server.'
     classpath = sourceSets.main.runtimeClasspath
     main = 'com.mydev.mactfs.server.MacTfsServer'
-    executable = file('../zulu8.94.0.17-ca-jdk8.0.492-macosx_x64/Contents/Home/bin/java').absolutePath
 }
 
 tasks.withType(JavaCompile) {

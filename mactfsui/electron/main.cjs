@@ -353,18 +353,6 @@ function resolveAppIcon() {
   return null
 }
 
-const API_BASE_URL = "http://127.0.0.1:38765"
-const HEALTH_URL = `${API_BASE_URL}/api/health`
-const TOKEN_FILE = path.join(os.homedir(), ".mactfs", "server-token")
-const MACTFS_DIRECTORY = path.resolve(__dirname, "../../mactfs")
-const RUN_SERVER_SCRIPT = path.resolve(__dirname, "../../mactfs/run-server.sh")
-const BUNDLED_JDK_HOME = path.resolve(
-  __dirname,
-  "../../zulu8.94.0.17-ca-jdk8.0.492-macosx_x64/Contents/Home"
-)
-let serviceStartAttempted = false
-let serviceStartError = ""
-
 /**
  * 创建 Electron 主窗口，开发环境加载本地服务，生产环境加载构建后的静态页面。
  */
