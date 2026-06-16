@@ -32,6 +32,7 @@ workspace/
 
 # Local JDK
 zulu8.94.0.17-ca-jdk8.0.492-macosx_x64/
+zulu8.94.0.17-ca-jdk8.0.492-macosx_aarch64/
 
 # E2E 截图
 **/.e2e-shots/

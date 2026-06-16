@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage } = require("electron")
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage, protocol } = require("electron")
 const path = require("node:path")
 const fs = require("node:fs")
 const os = require("node:os")
@@ -14,6 +14,58 @@ const HEALTH_TIMEOUT_MS = 2000
 const START_POLL_TIMES = 30
 const START_POLL_INTERVAL_MS = 1000
 
+// 自定义协议：以 app://bundle/ 提供前端静态资源。
+// 打包后构建产物使用绝对路径(/assets/...)，用 file:// 会指向磁盘根目录导致白屏，故走自定义协议从 build/client 映射。
+const APP_SCHEME = "app"
+const APP_ORIGIN = `${APP_SCHEME}://bundle/`
+const MIME_BY_EXT = {
+  ".html": "text/html",
+  ".js": "text/javascript",
+  ".mjs": "text/javascript",
+  ".css": "text/css",
+  ".json": "application/json",
+  ".map": "application/json",
+  ".ico": "image/x-icon",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+  ".webp": "image/webp",
+  ".ttf": "font/ttf",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".wasm": "application/wasm",
+}
+
+// 必须在 app ready 之前注册自定义协议的特权（标准协议 + 安全上下文）。
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: APP_SCHEME,
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+  },
+])
+
+/**
+ * 注册 app:// 协议处理器：把请求路径映射到 build/client 下的静态文件，找不到时回退到 index.html（适配前端路由）。
+ */
+function registerAppProtocol() {
+  const clientRoot = path.join(__dirname, "..", "build", "client")
+  protocol.handle(APP_SCHEME, async (request) => {
+    let relativePath = decodeURIComponent(new URL(request.url).pathname)
+    if (!relativePath || relativePath === "/") {
+      relativePath = "/index.html"
+    }
+    let filePath = path.normalize(path.join(clientRoot, relativePath))
+    if (!filePath.startsWith(clientRoot) || !fs.existsSync(filePath)) {
+      filePath = path.join(clientRoot, "index.html")
+    }
+    const data = await fs.promises.readFile(filePath)
+    const contentType = MIME_BY_EXT[path.extname(filePath).toLowerCase()] || "application/octet-stream"
+    return new Response(data, { headers: { "content-type": contentType } })
+  })
+}
+
 // 记录由本进程拉起的服务端子进程，便于应用退出时回收。
 let serverProcess = null
 
@@ -24,19 +76,30 @@ function resolveProjectRoot() {
   return path.resolve(__dirname, "..", "..")
 }
 
+// 服务端 JVM 固定使用 x64：TFS 的 JNI 原生库（libnative_*.jnilib）只含 i386/x86_64，无 arm64 切片，
+// 用 arm64 JVM 加载会 UnsatisfiedLinkError。Apple Silicon 上 x64 JVM 经 Rosetta 2 运行；
+// 服务端是 IO 密集型，Rosetta 开销可接受。UI（Electron）走 universal 原生，已解决界面卡顿。
+const PACKAGED_JRE_DIR = "jre-x64"
+const DEV_JDK_DIR = "zulu8.94.0.17-ca-jdk8.0.492-macosx_x64"
+
 /**
- * 解析运行服务端使用的 Java 可执行文件，优先项目内置 zulu8，其次 JAVA_HOME，最后 PATH 上的 java。
+ * 解析运行服务端使用的 Java 可执行文件：固定 x64 内置 zulu8，其次 JAVA_HOME，最后 PATH 上的 java。
  */
 function resolveJavaBin() {
+  // 打包态：x64 JRE 随 extraResources 落在 Resources/jre-x64 下。
+  if (app.isPackaged) {
+    const packaged = path.join(process.resourcesPath, PACKAGED_JRE_DIR, "bin", "java")
+    if (fs.existsSync(packaged)) {
+      return packaged
+    }
+    // 兼容旧单架构包结构（Resources/jre）。
+    const legacy = path.join(process.resourcesPath, "jre", "bin", "java")
+    if (fs.existsSync(legacy)) {
+      return legacy
+    }
+  }
   const projectRoot = resolveProjectRoot()
-  const bundled = path.join(
-    projectRoot,
-    "zulu8.94.0.17-ca-jdk8.0.492-macosx_x64",
-    "Contents",
-    "Home",
-    "bin",
-    "java",
-  )
+  const bundled = path.join(projectRoot, DEV_JDK_DIR, "Contents", "Home", "bin", "java")
   if (fs.existsSync(bundled)) {
     return bundled
   }
@@ -53,6 +116,13 @@ function resolveJavaBin() {
  * 解析服务端 classpath，优先使用 application 安装包 lib 目录（已包含全部运行依赖）。
  */
 function resolveServerClasspath() {
+  // 打包态：服务端 jar 随 extraResources 落在 Resources/server/lib 下。
+  if (app.isPackaged) {
+    const packagedLib = path.join(process.resourcesPath, "server", "lib")
+    if (fs.existsSync(packagedLib)) {
+      return path.join(packagedLib, "*")
+    }
+  }
   const installLib = path.join(
     resolveProjectRoot(),
     "mactfs",
@@ -71,6 +141,13 @@ function resolveServerClasspath() {
  * 解析 TFS native 库目录，供 SDK 加载 JNI 库。
  */
 function resolveNativeDirectory() {
+  // 打包态：JNI native 库随服务端 lib 一起落在 Resources/server/lib/native 下。
+  if (app.isPackaged) {
+    const packagedNative = path.join(process.resourcesPath, "server", "lib", "native")
+    if (fs.existsSync(packagedNative)) {
+      return packagedNative
+    }
+  }
   const projectRoot = resolveProjectRoot()
   const installNative = path.join(
     projectRoot,
@@ -192,7 +269,7 @@ async function startService() {
     }
     args.push(SERVER_MAIN_CLASS)
     serverProcess = spawn(resolveJavaBin(), args, {
-      cwd: path.join(resolveProjectRoot(), "mactfs"),
+      cwd: app.isPackaged ? process.resourcesPath : path.join(resolveProjectRoot(), "mactfs"),
       stdio: "ignore",
     })
     serverProcess.on("exit", () => {
@@ -319,7 +396,8 @@ function createWindow() {
     return
   }
 
-  mainWindow.loadFile(path.join(__dirname, "../build/client/index.html"))
+  // 生产/打包态走自定义协议，保证前端的绝对资源路径(/assets/...)可被正确解析。
+  mainWindow.loadURL(APP_ORIGIN)
 }
 
 app.setName("MacTFS")
@@ -330,6 +408,7 @@ app.whenReady().then(() => {
   if (process.platform === "darwin" && iconPath && app.dock) {
     app.dock.setIcon(nativeImage.createFromPath(iconPath))
   }
+  registerAppProtocol()
   registerIpcHandlers()
   createWindow()
 
