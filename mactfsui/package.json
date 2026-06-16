@@ -1,24 +1,68 @@
 {
   "name": "mactfsui",
   "private": true,
+  "version": "1.0.0",
+  "description": "MacTFS - 面向 macOS 的 TFS 客户端（前端 + 内置 Java 服务）",
+  "author": "mydev",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
     "electron": "electron electron/main.cjs",
-    "electron:dev": "concurrently -k \"pnpm dev\" \"wait-on tcp:5173 && NODE_ENV=development electron electron/main.cjs\"",
+    "electron:dev": "concurrently -k \"pnpm dev\" \"NO_PROXY=localhost,127.0.0.1 wait-on http://localhost:5173 && NODE_ENV=development electron electron/main.cjs\"",
     "start": "pnpm build && pnpm electron",
+    "prepare:runtime": "node scripts/prepare-runtime.mjs",
+    "dist": "pnpm build && pnpm prepare:runtime && electron-builder --mac --arm64 --x64",
     "typecheck": "react-router typegen && tsc",
     "format": "prettier --write \"**/*.{ts,tsx}\""
   },
+  "build": {
+    "appId": "com.mydev.mactfs",
+    "productName": "MacTFS",
+    "directories": {
+      "buildResources": "build-resources",
+      "output": "dist-app"
+    },
+    "files": [
+      "electron/**/*",
+      "build/client/**/*",
+      "package.json",
+      "!node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../mactfs/build/install/mactfs/lib",
+        "to": "server/lib"
+      },
+      {
+        "from": "runtime/jdk-x64",
+        "to": "jre-x64"
+      }
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.developer-tools",
+      "icon": "build-resources/icon.icns",
+      "identity": null
+    }
+  },
   "dependencies": {
-    "@fontsource-variable/roboto-slab": "^5.2.8",
     "@react-router/node": "7.13.1",
     "@react-router/serve": "7.13.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "isbot": "^5.1.36",
     "lucide-react": "^1.16.0",
+    "monaco-editor": "^0.55.1",
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -35,6 +79,8 @@
     "@types/react-dom": "^19.2.3",
     "concurrently": "^9.2.1",
     "electron": "^42.2.0",
+    "electron-builder": "^26.15.3",
+    "playwright-core": "^1.60.0",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^4.2.1",

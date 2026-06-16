@@ -14,7 +14,7 @@ feature
 
 ## 依赖任务
 
-- FE-004
+- FE-013
 - SERVER-005
 
 ## 需求来源
@@ -23,14 +23,15 @@ feature
 
 ## 目标
 
-验证从 UI 到 API 到 TFS SDK 的连接和目录浏览完整链路。
+验证从登录页到固定 Collection / Workspace 上下文，再到目录树和当前目录列表的完整链路。
 
 ## 实现范围
 
-- UI 输入账号密码连接
-- 查询 Collection
+- UI 输入账号密码并连接
+- 连接后加载 Collection
+- 选择 Collection 并自动确保 Workspace
 - 展示左侧服务端目录树
-- 点击目录展示下一级文件列表
+- 点击目录展示中间当前目录列表
 - 未映射目录也可浏览
 
 ## 不在范围
@@ -47,9 +48,10 @@ feature
 ## 验收标准
 
 - 真实 TFS 环境可连接
-- Collection 可见
+- Collection 可见并可确认
+- 默认 Workspace 可自动使用或创建
 - 服务端目录树可展开
-- 中间文件列表可展示
+- 中间当前目录列表可展示
 
 ## 测试方式
 

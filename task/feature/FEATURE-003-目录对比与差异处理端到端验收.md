@@ -15,6 +15,7 @@ feature
 ## 依赖任务
 
 - FEATURE-002
+- FE-006
 - FE-007
 - FE-009
 - SERVER-008
@@ -25,22 +26,21 @@ feature
 
 ## 目标
 
-验证目录对比和勾选差异文件处理完整链路。
+验证目录对比弹窗、差异筛选、右键动作和冲突反馈链路。
 
 ## 实现范围
 
 - 对已映射目录执行对比
 - 展示差异文件
-- 勾选 localModified 执行 checkout
-- 勾选 localOnly 执行 add
-- 勾选 notDownloaded 执行 Get Latest
-- 勾选 pending change 执行 undo
+- 通过右键菜单执行 checkout、add、get latest、undo
+- 对冲突项进入统一冲突处理
+- 验证目录对比结果刷新
 
 ## 不在范围
 
 - 不做自动修复全部
-- 不做冲突解决
-- 不做实时刷新
+- 不做手动冲突块编辑
+- 不做实时 watcher
 
 ## 涉及文件
 
@@ -49,9 +49,10 @@ feature
 
 ## 验收标准
 
-- 目录对比不显示 upToDate
+- 目录对比默认不显示 `upToDate`
 - 差异状态准确
-- 用户可勾选文件执行对应操作
+- 用户可通过右键菜单执行对应操作
+- 有冲突时能进入统一冲突反馈流程
 
 ## 测试方式
 

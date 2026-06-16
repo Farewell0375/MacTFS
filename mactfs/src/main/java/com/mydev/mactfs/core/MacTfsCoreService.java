@@ -1,5 +1,8 @@
 package com.mydev.mactfs.core;
 
+import com.github.difflib.DiffUtils;
+import com.github.difflib.patch.AbstractDelta;
+import com.github.difflib.patch.Patch;
 import com.microsoft.tfs.core.TFSConfigurationServer;
 import com.microsoft.tfs.core.TFSTeamProjectCollection;
 import com.microsoft.tfs.core.clients.framework.configuration.TFSEntitySession;
@@ -10,7 +13,9 @@ import com.microsoft.tfs.core.clients.framework.location.ConnectOptions;
 import com.microsoft.tfs.core.clients.versioncontrol.GetItemsOptions;
 import com.microsoft.tfs.core.clients.versioncontrol.GetOptions;
 import com.microsoft.tfs.core.clients.versioncontrol.GetStatus;
+import com.microsoft.tfs.core.clients.versioncontrol.MergeFlags;
 import com.microsoft.tfs.core.clients.versioncontrol.PendChangesOptions;
+import com.microsoft.tfs.core.clients.versioncontrol.RollbackOptions;
 import com.microsoft.tfs.core.clients.versioncontrol.VersionControlClient;
 import com.microsoft.tfs.core.clients.versioncontrol.WorkspaceLocation;
 import com.microsoft.tfs.core.clients.versioncontrol.WorkspaceOptions;
@@ -18,6 +23,8 @@ import com.microsoft.tfs.core.clients.versioncontrol.exceptions.WorkspaceNotFoun
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.Change;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.ChangeType;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.Changeset;
+import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.Conflict;
+import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.ConflictType;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.DeletedState;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.ExtendedItem;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.GetRequest;
@@ -25,9 +32,11 @@ import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.Item;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.ItemSet;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.ItemType;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.LockLevel;
+import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.MergeCandidate;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.PendingChange;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.PendingSet;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.RecursionType;
+import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.Resolution;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.WorkingFolder;
 import com.microsoft.tfs.core.clients.versioncontrol.soapextensions.Workspace;
 import com.microsoft.tfs.core.clients.versioncontrol.specs.ItemSpec;
@@ -56,13 +65,14 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * macTFS 核心服务层，封装 TFS 连接、目录、Workspace、文件操作、历史和 Diff 能力。
+ * MacTFS 核心服务层，封装 TFS 连接、目录、Workspace、文件操作、历史和 Diff 能力。
  */
 public class MacTfsCoreService {
 
     private static final int HISTORY_LIMIT = 100;
     private static final Charset TEXT_CHARSET = Charset.forName("UTF-8");
-    private static final long MAX_RENDER_BYTES = 5L * 1024L * 1024L;
+    private static final long MAX_TEXT_CONTENT_BYTES = 2L * 1024 * 1024;
+    private static final int BINARY_SNIFF_BYTES = 8000;
 
     /**
      * 验证 TFS 地址和账号可用性，并返回当前账号可见 Collection 数量。
@@ -130,7 +140,7 @@ public class MacTfsCoreService {
     }
 
     /**
-     * 查询或创建 Collection 默认 Workspace，未传名称时按 macTFS 规则生成。
+     * 查询或创建 Collection 默认 Workspace，未传名称时按 MacTFS 规则生成。
      */
     public CoreOperationResult<TfsWorkspaceInfo> ensureWorkspace(final TfsConnectionConfig config,
                                                                 final String collectionName,
@@ -221,37 +231,70 @@ public class MacTfsCoreService {
     }
 
     /**
-     * 对文件、目录或整个 Workspace 执行 Get Latest。
+     * 对文件、目录或整个 Workspace 执行 Get Latest（默认安全模式，不覆盖本地改动）。
      */
     public CoreOperationResult<TfsGetLatestResult> getLatest(final TfsConnectionConfig config,
                                                             final String collectionName,
                                                             final String workspaceName,
                                                             final String serverPath,
                                                             final boolean recursive) {
+        return getLatest(config, collectionName, workspaceName, serverPath, recursive, false);
+    }
+
+    /**
+     * 对文件、目录或整个 Workspace 执行 Get Latest。
+     * force=false 走安全模式（GetOptions.NONE），本地有改动的文件会产生冲突而不会被覆盖；
+     * force=true 等价 Visual Studio 的强制获取（GET_ALL + OVERWRITE），直接覆盖本地。
+     */
+    public CoreOperationResult<TfsGetLatestResult> getLatest(final TfsConnectionConfig config,
+                                                            final String collectionName,
+                                                            final String workspaceName,
+                                                            final String serverPath,
+                                                            final boolean recursive,
+                                                            final boolean force) {
         return execute("getLatest", new CoreCallable<TfsGetLatestResult>() {
             @Override
             public TfsGetLatestResult call(List<String> logs) throws Exception {
                 Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                GetOptions options = force ? GetOptions.GET_ALL.combine(GetOptions.OVERWRITE) : GetOptions.NONE;
                 GetStatus status;
                 String normalizedPath = serverPath == null || serverPath.trim().isEmpty() ? null : normalizeServerPath(serverPath);
                 List<TfsConflictInfo> skipped = normalizedPath == null
                     ? Collections.<TfsConflictInfo>emptyList()
                     : pendingEditConflictInfos(queryPendingChanges(workspace, Arrays.asList(normalizedPath), recursive));
                 if (normalizedPath == null) {
-                    status = workspace.get(GetOptions.GET_ALL.combine(GetOptions.OVERWRITE));
-                    logs.add("Get latest workspace: " + workspace.getName());
-                } else if (!skipped.isEmpty()) {
-                    GetRequest[] requests = nonPendingGetRequests(workspace, normalizedPath, recursive, skipped);
-                    status = requests.length == 0 ? null : workspace.get(requests, GetOptions.GET_ALL);
-                    logs.add("Get latest path: " + normalizedPath);
-                    logs.add("Skipped pending edit items: " + skipped.size());
+                    status = workspace.get(options);
+                    logs.add("Get latest workspace: " + workspace.getName() + (force ? " (force)" : ""));
                 } else {
                     RecursionType recursionType = recursive ? RecursionType.FULL : RecursionType.NONE;
                     GetRequest request = new GetRequest(new ItemSpec(normalizedPath, recursionType), LatestVersionSpec.INSTANCE);
-                    status = workspace.get(new GetRequest[]{request}, GetOptions.GET_ALL);
-                    logs.add("Get latest path: " + normalizedPath);
+                    status = workspace.get(new GetRequest[]{request}, options);
+                    logs.add("Get latest path: " + normalizedPath + (force ? " (force)" : ""));
                 }
                 return toGetLatestResult(status, skipped);
+            }
+        });
+    }
+
+    /**
+     * 获取指定 changeset 版本（强制覆盖本地），对应 Visual Studio 的 Get Specific Version + Overwrite。
+     */
+    public CoreOperationResult<TfsGetLatestResult> getVersion(final TfsConnectionConfig config,
+                                                              final String collectionName,
+                                                              final String workspaceName,
+                                                              final String serverPath,
+                                                              final int changeset,
+                                                              final boolean recursive) {
+        return execute("getVersion", new CoreCallable<TfsGetLatestResult>() {
+            @Override
+            public TfsGetLatestResult call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                String normalizedPath = normalizeServerPath(serverPath);
+                RecursionType recursionType = recursive ? RecursionType.FULL : RecursionType.NONE;
+                GetRequest request = new GetRequest(new ItemSpec(normalizedPath, recursionType), new ChangesetVersionSpec(changeset));
+                GetStatus status = workspace.get(new GetRequest[]{request}, GetOptions.GET_ALL.combine(GetOptions.OVERWRITE));
+                logs.add("Get version C" + changeset + ": " + normalizedPath);
+                return toGetLatestResult(status);
             }
         });
     }
@@ -376,6 +419,157 @@ public class MacTfsCoreService {
     }
 
     /**
+     * 分支：把源服务端路径分叉到目标路径（pendBranch 产生挂起更改，签入后服务器生效）。
+     * 目标路径所在父目录必须已映射；changesetId 为 null 时基于 latest。
+     */
+    public CoreOperationResult<TfsFileOperationResult> branch(final TfsConnectionConfig config,
+                                                              final String collectionName,
+                                                              final String workspaceName,
+                                                              final String sourceServerPath,
+                                                              final String targetServerPath,
+                                                              final Integer changesetId) {
+        return execute("branch", new CoreCallable<TfsFileOperationResult>() {
+            @Override
+            public TfsFileOperationResult call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                String source = normalizeServerPath(require(sourceServerPath, "sourceServerPath"));
+                String target = normalizeServerPath(require(targetServerPath, "targetServerPath"));
+                if (source.equals(target)) {
+                    throw new IllegalArgumentException("Target path is same as source path");
+                }
+                VersionSpec version = changesetId == null
+                    ? LatestVersionSpec.INSTANCE
+                    : new ChangesetVersionSpec(changesetId.intValue());
+                int affected = workspace.pendBranch(source, target, version, LockLevel.NONE, RecursionType.FULL, GetOptions.NONE, PendChangesOptions.NONE);
+                logs.add("Branch pended: " + source + " -> " + target);
+                return new TfsFileOperationResult("branch", affected, Collections.<String>emptyList());
+            }
+        });
+    }
+
+    /**
+     * 查询源 → 目标的待合并变更集候选列表（对应 VS Merge 向导的候选页）。
+     */
+    public CoreOperationResult<List<TfsHistoryEntry>> mergeCandidates(final TfsConnectionConfig config,
+                                                                      final String collectionName,
+                                                                      final String workspaceName,
+                                                                      final String sourceServerPath,
+                                                                      final String targetServerPath) {
+        return execute("mergeCandidates", new CoreCallable<List<TfsHistoryEntry>>() {
+            @Override
+            public List<TfsHistoryEntry> call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                String source = normalizeServerPath(require(sourceServerPath, "sourceServerPath"));
+                String target = normalizeServerPath(require(targetServerPath, "targetServerPath"));
+                MergeCandidate[] candidates = workspace.getMergeCandidates(source, target, RecursionType.FULL, MergeFlags.NONE);
+                List<TfsHistoryEntry> result = new ArrayList<TfsHistoryEntry>();
+                if (candidates != null) {
+                    for (MergeCandidate candidate : candidates) {
+                        Changeset changeset = candidate.getChangeset();
+                        if (changeset == null) {
+                            continue;
+                        }
+                        result.add(new TfsHistoryEntry(
+                            source,
+                            nameOf(source),
+                            candidate.isPartial() ? "partial merge" : "merge",
+                            "",
+                            changeset.getChangesetID(),
+                            emptyToDefault(changeset.getOwnerDisplayName(), changeset.getOwner()),
+                            changeset.getDate() == null ? null : Long.valueOf(changeset.getDate().getTimeInMillis()),
+                            changeset.getComment()
+                        ));
+                    }
+                }
+                logs.add("Merge candidates: " + result.size());
+                return result;
+            }
+        });
+    }
+
+    /**
+     * 合并：把源分支的改动合并到目标分支（产生挂起更改，冲突走冲突处理）。
+     * changesetId 为 null 时合并全部候选，否则仅合并该变更集。
+     */
+    public CoreOperationResult<TfsGetLatestResult> merge(final TfsConnectionConfig config,
+                                                         final String collectionName,
+                                                         final String workspaceName,
+                                                         final String sourceServerPath,
+                                                         final String targetServerPath,
+                                                         final Integer changesetId) {
+        return execute("merge", new CoreCallable<TfsGetLatestResult>() {
+            @Override
+            public TfsGetLatestResult call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                String source = normalizeServerPath(require(sourceServerPath, "sourceServerPath"));
+                String target = normalizeServerPath(require(targetServerPath, "targetServerPath"));
+                VersionSpec from = changesetId == null ? null : new ChangesetVersionSpec(changesetId.intValue());
+                VersionSpec to = changesetId == null ? LatestVersionSpec.INSTANCE : new ChangesetVersionSpec(changesetId.intValue());
+                GetStatus status = workspace.merge(source, target, from, to, LockLevel.NONE, RecursionType.FULL, MergeFlags.NONE);
+                logs.add("Merge " + source + " -> " + target + " operations=" + status.getNumOperations() + " conflicts=" + status.getNumConflicts());
+                return toGetLatestResult(status);
+            }
+        });
+    }
+
+    /**
+     * 回滚变更集（只产生挂起更改，需用户审查后签入）：
+     * mode=single 仅反做该 changeset；mode=toVersion 反做该 changeset 之后的全部改动。
+     */
+    public CoreOperationResult<TfsGetLatestResult> rollback(final TfsConnectionConfig config,
+                                                            final String collectionName,
+                                                            final String workspaceName,
+                                                            final String serverPath,
+                                                            final String mode,
+                                                            final int changesetId) {
+        return execute("rollback", new CoreCallable<TfsGetLatestResult>() {
+            @Override
+            public TfsGetLatestResult call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                ItemSpec[] specs = new ItemSpec[] {
+                    new ItemSpec(normalizeServerPath(require(serverPath, "serverPath")), RecursionType.FULL)
+                };
+                boolean toVersion = "toVersion".equalsIgnoreCase(require(mode, "mode"));
+                ChangesetVersionSpec changesetSpec = new ChangesetVersionSpec(changesetId);
+                GetStatus status = toVersion
+                    ? workspace.rollback(specs, LatestVersionSpec.INSTANCE, null, changesetSpec, LockLevel.NONE, RollbackOptions.TO_VERSION)
+                    : workspace.rollback(specs, LatestVersionSpec.INSTANCE, changesetSpec, changesetSpec, LockLevel.NONE, RollbackOptions.NONE);
+                logs.add("Rollback mode=" + mode + " changeset=" + changesetId + " operations=" + status.getNumOperations());
+                return toGetLatestResult(status);
+            }
+        });
+    }
+
+    /**
+     * 重命名已映射的文件或目录（同目录改名）：产生 rename 挂起更改，签入后服务器生效。
+     */
+    public CoreOperationResult<TfsFileOperationResult> rename(final TfsConnectionConfig config,
+                                                              final String collectionName,
+                                                              final String workspaceName,
+                                                              final String serverPath,
+                                                              final String newName) {
+        return execute("rename", new CoreCallable<TfsFileOperationResult>() {
+            @Override
+            public TfsFileOperationResult call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                String oldPath = normalizeServerPath(require(serverPath, "serverPath"));
+                String name = require(newName, "newName").trim();
+                if (name.contains("/") || name.contains("\\")) {
+                    throw new IllegalArgumentException("Invalid new name: " + newName);
+                }
+                int slash = oldPath.lastIndexOf('/');
+                String newPath = oldPath.substring(0, slash + 1) + name;
+                if (newPath.equals(oldPath)) {
+                    throw new IllegalArgumentException("New name is same as current name");
+                }
+                int affected = workspace.pendRename(oldPath, newPath, LockLevel.NONE, GetOptions.NONE, true, PendChangesOptions.NONE);
+                logs.add("Rename pended: " + oldPath + " -> " + newPath);
+                return new TfsFileOperationResult("rename", affected, Collections.<String>emptyList());
+            }
+        });
+    }
+
+    /**
      * 按选中的 pending changes 执行 checkin，comment 为空时直接拒绝。
      */
     public CoreOperationResult<TfsCheckinResult> checkin(final TfsConnectionConfig config,
@@ -407,7 +601,8 @@ public class MacTfsCoreService {
                                                                      final String workspaceName,
                                                                      final String serverPath,
                                                                      final String localPath,
-                                                                     final boolean recursive) {
+                                                                     final boolean recursive,
+                                                                     final boolean includeLocalOnly) {
         return execute("compareFolder", new CoreCallable<List<TfsFolderDiffItem>>() {
             @Override
             public List<TfsFolderDiffItem> call(List<String> logs) throws Exception {
@@ -421,7 +616,10 @@ public class MacTfsCoreService {
                 }
                 Map<String, ExtendedItem> serverItems = queryExtendedItems(workspace, normalizedServerPath, recursive);
                 Map<String, PendingChange> pendingChanges = mapPendingChanges(queryPendingChanges(workspace, Arrays.asList(normalizedServerPath), recursive));
-                Set<String> localFiles = scanLocalFiles(new File(normalizedLocalPath), recursive);
+                // 不统计仅本地存在的项时直接跳过本地全量扫描（如 node_modules 大目录），只对比两端都有的文件。
+                Set<String> localFiles = includeLocalOnly
+                    ? scanLocalFiles(new File(normalizedLocalPath), recursive)
+                    : new LinkedHashSet<String>();
                 Map<String, TfsFolderDiffItem> result = new LinkedHashMap<String, TfsFolderDiffItem>();
 
                 for (Map.Entry<String, ExtendedItem> entry : serverItems.entrySet()) {
@@ -541,26 +739,89 @@ public class MacTfsCoreService {
                     GetItemsOptions.DOWNLOAD
                 );
                 File tempFile = item.downloadFileToTempLocation(connection.versionControlClient, "mactfs");
+                TfsFileContent content = buildFileContent(item.getServerItem(), item.getChangeSetID(), tempFile, logs);
                 logs.add("File content loaded: " + item.getServerItem());
-                return readFileContent(item.getServerItem(), null, item.getChangeSetID(), "server", tempFile);
+                return content;
             }
         });
     }
 
     /**
-     * 读取本地文件内容，供 UI 在服务端完成 Mapping 边界校验后展示映射目录内文件。
+     * 读取本地已映射文件的文本内容，套用与服务器内容一致的二进制和大文件约束。
      */
-    public CoreOperationResult<TfsFileContent> getLocalFileContent(final String serverPath,
-                                                                  final String localPath) {
+    public CoreOperationResult<TfsFileContent> getLocalFileContent(final String localPath) {
         return execute("getLocalFileContent", new CoreCallable<TfsFileContent>() {
             @Override
             public TfsFileContent call(List<String> logs) throws Exception {
                 File file = new File(require(localPath, "localPath"));
-                if (!file.isFile()) {
+                if (!file.exists() || file.isDirectory()) {
                     throw new IllegalArgumentException("Local file not found: " + localPath);
                 }
+                TfsFileContent content = buildFileContent(file.getAbsolutePath(), 0, file, logs);
                 logs.add("Local file content loaded: " + file.getAbsolutePath());
-                return readFileContent(serverPath, file.getAbsolutePath(), 0, "local", file);
+                return content;
+            }
+        });
+    }
+
+    /**
+     * 查询单个服务端对象（文件或目录）的属性信息：最新版本、签入时间与签入人，文件附带大小与编码。
+     * 签入人与备注来自最近一条历史记录（Item 本身不携带提交人信息）。
+     */
+    public CoreOperationResult<TfsItemInfo> getItemInfo(final TfsConnectionConfig config,
+                                                        final String collectionName,
+                                                        final String serverPath) {
+        return execute("getItemInfo", new CoreCallable<TfsItemInfo>() {
+            @Override
+            public TfsItemInfo call(List<String> logs) throws Exception {
+                CoreConnection connection = connectCollection(config, collectionName);
+                Item item = connection.versionControlClient.getItem(
+                    require(serverPath, "serverPath"),
+                    LatestVersionSpec.INSTANCE,
+                    DeletedState.NON_DELETED,
+                    GetItemsOptions.NONE
+                );
+                boolean folder = isFolder(item.getItemType());
+                int changeset = item.getChangeSetID();
+                Long checkinDate = item.getCheckinDate() == null ? null : Long.valueOf(item.getCheckinDate().getTimeInMillis());
+                String author = "";
+                String comment = "";
+                Changeset[] changesets = connection.versionControlClient.queryHistory(
+                    item.getServerItem(),
+                    LatestVersionSpec.INSTANCE,
+                    0,
+                    folder ? RecursionType.FULL : RecursionType.NONE,
+                    null,
+                    null,
+                    null,
+                    1,
+                    false,
+                    true,
+                    false,
+                    false
+                );
+                if (changesets != null && changesets.length > 0 && changesets[0] != null) {
+                    Changeset latest = changesets[0];
+                    author = emptyToDefault(latest.getOwnerDisplayName(), latest.getOwner());
+                    comment = latest.getComment() == null ? "" : latest.getComment();
+                    // 目录的最新变动以子树最近一次签入为准（Item 自身的 changeset 不含子项变动）。
+                    changeset = latest.getChangesetID();
+                    if (latest.getDate() != null) {
+                        checkinDate = Long.valueOf(latest.getDate().getTimeInMillis());
+                    }
+                }
+                TfsItemInfo info = new TfsItemInfo(
+                    item.getServerItem(),
+                    folder,
+                    changeset,
+                    checkinDate,
+                    author,
+                    comment,
+                    folder ? null : Long.valueOf(item.getContentLength()),
+                    folder || item.getEncoding() == null ? null : item.getEncoding().getName()
+                );
+                logs.add("Item info loaded: " + item.getServerItem());
+                return info;
             }
         });
     }
@@ -579,14 +840,9 @@ public class MacTfsCoreService {
                 if (!latest.isSuccess()) {
                     throw new IllegalStateException(latest.getErrorMessage());
                 }
-                TfsFileContent local = readFileContent(serverPath, new File(require(localPath, "localPath")).getAbsolutePath(), 0, "local", new File(localPath));
-                if (latest.getData() == null || !latest.getData().isRenderable()) {
-                    throw new IllegalArgumentException("Server latest is not text renderable");
-                }
-                if (!local.isRenderable()) {
-                    throw new IllegalArgumentException("Local file is not text renderable");
-                }
-                TfsTextDiff diff = buildTextDiff(localPath, serverPath, local.getContent(), latest.getData().getContent());
+                String localContent = new String(Files.readAllBytes(new File(require(localPath, "localPath")).toPath()), TEXT_CHARSET);
+                // 服务器 latest 作为旧版（左侧），本地文件作为新版（右侧），本地新增行才会标记为 "+"。
+                TfsTextDiff diff = buildTextDiff(serverPath, localPath, latest.getData().getContent(), localContent);
                 logs.add("Text diff lines: " + diff.getLines().size());
                 return diff;
             }
@@ -628,6 +884,193 @@ public class MacTfsCoreService {
                 return diff;
             }
         });
+    }
+
+    /**
+     * 查询当前 Workspace 在指定范围内的冲突明细，供 Get Latest / Checkout 冲突弹窗展示。
+     */
+    public CoreOperationResult<List<TfsConflictInfo>> listConflicts(final TfsConnectionConfig config,
+                                                                   final String collectionName,
+                                                                   final String workspaceName,
+                                                                   final List<String> serverPaths,
+                                                                   final boolean recursive) {
+        return execute("listConflicts", new CoreCallable<List<TfsConflictInfo>>() {
+            @Override
+            public List<TfsConflictInfo> call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                Conflict[] conflicts = workspace.queryConflicts(conflictScope(workspace, serverPaths), recursive);
+                List<TfsConflictInfo> result = new ArrayList<TfsConflictInfo>();
+                if (conflicts != null) {
+                    for (Conflict conflict : conflicts) {
+                        result.add(toConflictInfo(conflict));
+                    }
+                }
+                logs.add("Conflicts loaded: " + result.size());
+                return result;
+            }
+        });
+    }
+
+    /**
+     * 对单个冲突应用解决方式（采用服务器版本或保留本地版本），并返回剩余冲突数量。
+     */
+    public CoreOperationResult<TfsConflictResolution> applyConflict(final TfsConnectionConfig config,
+                                                                   final String collectionName,
+                                                                   final String workspaceName,
+                                                                   final int conflictId,
+                                                                   final String resolution) {
+        return execute("applyConflict", new CoreCallable<TfsConflictResolution>() {
+            @Override
+            public TfsConflictResolution call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                Resolution target = toResolution(resolution);
+                String[] scope = conflictScope(workspace, null);
+                Conflict matched = null;
+                Conflict[] conflicts = workspace.queryConflicts(scope, true);
+                if (conflicts != null) {
+                    for (Conflict conflict : conflicts) {
+                        if (conflict.getConflictID() == conflictId) {
+                            matched = conflict;
+                            break;
+                        }
+                    }
+                }
+                if (matched == null) {
+                    throw new IllegalArgumentException("Conflict not found: " + conflictId);
+                }
+                matched.setResolution(target);
+                workspace.resolveConflict(matched);
+                Conflict[] remaining = workspace.queryConflicts(scope, true);
+                int remainingCount = remaining == null ? 0 : remaining.length;
+                logs.add("Conflict resolved: " + conflictId + " -> " + resolution + ", remaining=" + remainingCount);
+                return new TfsConflictResolution(conflictId, resolution, matched.isResolved(), remainingCount);
+            }
+        });
+    }
+
+    /**
+     * 计算冲突查询范围：优先使用调用方传入的路径，否则回退到 Workspace 全部映射根。
+     */
+    private String[] conflictScope(Workspace workspace, List<String> serverPaths) {
+        List<String> scope = new ArrayList<String>();
+        if (serverPaths != null) {
+            for (String path : serverPaths) {
+                if (path != null && path.trim().length() > 0) {
+                    scope.add(path.trim());
+                }
+            }
+        }
+        if (scope.isEmpty()) {
+            WorkingFolder[] folders = workspace.getFolders();
+            if (folders != null) {
+                for (WorkingFolder folder : folders) {
+                    if (folder.getServerItem() != null && folder.getServerItem().trim().length() > 0) {
+                        scope.add(folder.getServerItem());
+                    }
+                }
+            }
+        }
+        if (scope.isEmpty()) {
+            scope.add("$/");
+        }
+        return scope.toArray(new String[scope.size()]);
+    }
+
+    /**
+     * 把 UI 传入的解决方式标识映射为 TFS Resolution，仅支持第一版约定的两种取舍。
+     */
+    private Resolution toResolution(String resolution) {
+        String value = resolution == null ? "" : resolution.trim().toLowerCase();
+        if ("takeserver".equals(value) || "server".equals(value) || "theirs".equals(value) || "accept_theirs".equals(value)) {
+            return Resolution.ACCEPT_THEIRS;
+        }
+        if ("keeplocal".equals(value) || "local".equals(value) || "yours".equals(value) || "accept_yours".equals(value)) {
+            return Resolution.ACCEPT_YOURS;
+        }
+        throw new IllegalArgumentException("Unsupported conflict resolution: " + resolution);
+    }
+
+    /**
+     * 把 TFS 冲突对象转换为稳定可序列化的冲突明细。
+     */
+    private TfsConflictInfo toConflictInfo(Conflict conflict) {
+        String serverPath = firstNonBlank(conflict.getYourServerItem(), conflict.getTheirServerItem(), conflict.getBaseServerItem());
+        String localPath = firstNonBlank(conflict.getSourceLocalItem(), conflict.getTargetLocalItem());
+        return new TfsConflictInfo(
+            conflict.getConflictID(),
+            conflictTypeName(conflict.getType()),
+            serverPath,
+            localPath,
+            conflict.getYourServerItem(),
+            conflict.getTheirServerItem(),
+            conflict.getBaseServerItem(),
+            conflict.isResolved()
+        );
+    }
+
+    /**
+     * 返回冲突类型的稳定字符串名称，避免直接依赖枚举 toString。
+     */
+    private String conflictTypeName(ConflictType type) {
+        if (ConflictType.GET.equals(type)) {
+            return "get";
+        }
+        if (ConflictType.CHECKIN.equals(type)) {
+            return "checkin";
+        }
+        if (ConflictType.LOCAL.equals(type)) {
+            return "local";
+        }
+        if (ConflictType.MERGE.equals(type)) {
+            return "merge";
+        }
+        if (ConflictType.NONE.equals(type)) {
+            return "none";
+        }
+        return "unknown";
+    }
+
+    /**
+     * 读取本地文件字节并按二进制识别和大小阈值套用文本内容约束。
+     */
+    private TfsFileContent buildFileContent(String serverPath, int changeset, File file, List<String> logs) throws IOException {
+        byte[] bytes = Files.readAllBytes(file.toPath());
+        long size = bytes.length;
+        boolean binary = isBinaryContent(bytes);
+        boolean tooLarge = size > MAX_TEXT_CONTENT_BYTES;
+        if (binary || tooLarge) {
+            logs.add("File content skipped (binary=" + binary + ", tooLarge=" + tooLarge + ", size=" + size + ")");
+            return new TfsFileContent(serverPath, changeset, "", binary, size, tooLarge);
+        }
+        return new TfsFileContent(serverPath, changeset, new String(bytes, TEXT_CHARSET), false, size, false);
+    }
+
+    /**
+     * 通过嗅探前若干字节是否包含空字节判断内容是否为二进制。
+     */
+    private boolean isBinaryContent(byte[] bytes) {
+        int limit = (int) Math.min(bytes.length, (long) BINARY_SNIFF_BYTES);
+        for (int index = 0; index < limit; index++) {
+            if (bytes[index] == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 返回第一个非空字符串，供冲突路径回退使用。
+     */
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (value != null && value.trim().length() > 0) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private <T> CoreOperationResult<T> execute(String operation, CoreCallable<T> callable) {
@@ -866,8 +1309,12 @@ public class MacTfsCoreService {
         }
         boolean exists = localFile != null && localFile.exists();
         boolean remoteChanged = item.getLocalVersion() > 0 && item.getLatestVersion() > item.getLocalVersion();
-        // mtime 只能作为远端版本变化时的辅助信号，避免 Get Latest 后因本地时间晚于签入时间误报本地修改。
-        boolean localModified = remoteChanged && exists && item.getCheckinDate() != null && localFile.lastModified() > item.getCheckinDate().getTimeInMillis();
+        // 服务器工作区下文件取下来默认只读，变为可写说明被本地解锁修改过（对齐 VS 的 writable 判定），
+        // 这样未签出的纯本地修改也能在目录对比中暴露出来。
+        boolean writableFile = exists && !isFolder(item.getItemType()) && localFile.canWrite();
+        // mtime 仅作为远端版本变化时的辅助信号，避免 Get Latest 后因本地时间晚于签入时间误报本地修改。
+        boolean mtimeNewer = exists && item.getCheckinDate() != null && localFile.lastModified() > item.getCheckinDate().getTimeInMillis();
+        boolean localModified = writableFile || (remoteChanged && mtimeNewer);
         if (!exists && item.getLocalVersion() > 0) {
             return "localDeleted";
         }
@@ -1030,7 +1477,9 @@ public class MacTfsCoreService {
                 isFolder(change.getItemType()),
                 toPendingStatus(change),
                 change.getChangeType() == null ? "" : change.getChangeType().toUIString(false),
-                change.getVersion()
+                change.getVersion(),
+                // rename 挂起更改携带原路径，供 UI 展示「旧名 → 新名」。
+                change.isRename() ? change.getSourceServerItem() : null
             ));
         }
         return result;
@@ -1104,21 +1553,28 @@ public class MacTfsCoreService {
     private TfsTextDiff buildTextDiff(String sourceLabel, String targetLabel, String sourceContent, String targetContent) {
         List<String> sourceLines = Arrays.asList(sourceContent.split("\\r?\\n", -1));
         List<String> targetLines = Arrays.asList(targetContent.split("\\r?\\n", -1));
-        int max = Math.max(sourceLines.size(), targetLines.size());
+        // 使用 java-diff-utils（Myers 算法）计算最小差异，
+        // 避免按行号硬对齐导致插入/删除一行后其余行全部误报为变动。
+        Patch<String> patch = DiffUtils.diff(sourceLines, targetLines);
         List<String> lines = new ArrayList<String>();
-        for (int index = 0; index < max; index++) {
-            String source = index < sourceLines.size() ? sourceLines.get(index) : null;
-            String target = index < targetLines.size() ? targetLines.get(index) : null;
-            if (source != null && target != null && source.equals(target)) {
-                lines.add(" " + source);
-            } else {
-                if (source != null) {
-                    lines.add("-" + source);
-                }
-                if (target != null) {
-                    lines.add("+" + target);
-                }
+        int sourceIndex = 0;
+        for (AbstractDelta<String> delta : patch.getDeltas()) {
+            int deltaStart = delta.getSource().getPosition();
+            while (sourceIndex < deltaStart) {
+                lines.add(" " + sourceLines.get(sourceIndex));
+                sourceIndex++;
             }
+            for (String removed : delta.getSource().getLines()) {
+                lines.add("-" + removed);
+            }
+            for (String added : delta.getTarget().getLines()) {
+                lines.add("+" + added);
+            }
+            sourceIndex += delta.getSource().size();
+        }
+        while (sourceIndex < sourceLines.size()) {
+            lines.add(" " + sourceLines.get(sourceIndex));
+            sourceIndex++;
         }
         return new TfsTextDiff(sourceLabel, targetLabel, lines);
     }
@@ -1609,8 +2065,9 @@ public class MacTfsCoreService {
         private final String status;
         private final String changeType;
         private final int version;
+        private final String sourceServerPath;
 
-        public TfsPendingChangeInfo(String serverPath, String localPath, String name, boolean folder, String status, String changeType, int version) {
+        public TfsPendingChangeInfo(String serverPath, String localPath, String name, boolean folder, String status, String changeType, int version, String sourceServerPath) {
             this.serverPath = serverPath;
             this.localPath = localPath;
             this.name = name;
@@ -1618,6 +2075,7 @@ public class MacTfsCoreService {
             this.status = status;
             this.changeType = changeType;
             this.version = version;
+            this.sourceServerPath = sourceServerPath;
         }
 
         public String getServerPath() {
@@ -1646,6 +2104,10 @@ public class MacTfsCoreService {
 
         public int getVersion() {
             return version;
+        }
+
+        public String getSourceServerPath() {
+            return sourceServerPath;
         }
     }
 
@@ -1819,12 +2281,10 @@ public class MacTfsCoreService {
         private final String encoding;
         private final String content;
         private final boolean binary;
+        private final long size;
+        private final boolean tooLarge;
 
-        public TfsFileContent(String serverPath, int changeset, String content, boolean binary) {
-            this(serverPath, null, changeset, "server", content == null ? 0L : content.length(), binary, !binary, TEXT_CHARSET.name(), content);
-        }
-
-        public TfsFileContent(String serverPath, String localPath, int changeset, String source, long size, boolean binary, boolean renderable, String encoding, String content) {
+        public TfsFileContent(String serverPath, int changeset, String content, boolean binary, long size, boolean tooLarge) {
             this.serverPath = serverPath;
             this.localPath = localPath;
             this.changeset = changeset;
@@ -1834,6 +2294,8 @@ public class MacTfsCoreService {
             this.encoding = encoding;
             this.content = content;
             this.binary = binary;
+            this.size = size;
+            this.tooLarge = tooLarge;
         }
 
         public String getServerPath() {
@@ -1870,6 +2332,154 @@ public class MacTfsCoreService {
 
         public boolean isBinary() {
             return binary;
+        }
+
+        public long getSize() {
+            return size;
+        }
+
+        public boolean isTooLarge() {
+            return tooLarge;
+        }
+    }
+
+    public static class TfsItemInfo {
+        private final String serverPath;
+        private final boolean folder;
+        private final int changeset;
+        private final Long checkinDate;
+        private final String author;
+        private final String comment;
+        private final Long size;
+        private final String encoding;
+
+        public TfsItemInfo(String serverPath, boolean folder, int changeset, Long checkinDate,
+                           String author, String comment, Long size, String encoding) {
+            this.serverPath = serverPath;
+            this.folder = folder;
+            this.changeset = changeset;
+            this.checkinDate = checkinDate;
+            this.author = author;
+            this.comment = comment;
+            this.size = size;
+            this.encoding = encoding;
+        }
+
+        public String getServerPath() {
+            return serverPath;
+        }
+
+        public boolean isFolder() {
+            return folder;
+        }
+
+        public int getChangeset() {
+            return changeset;
+        }
+
+        public Long getCheckinDate() {
+            return checkinDate;
+        }
+
+        public String getAuthor() {
+            return author;
+        }
+
+        public String getComment() {
+            return comment;
+        }
+
+        public Long getSize() {
+            return size;
+        }
+
+        public String getEncoding() {
+            return encoding;
+        }
+    }
+
+    public static class TfsConflictInfo {
+        private final int conflictId;
+        private final String type;
+        private final String serverPath;
+        private final String localPath;
+        private final String yourServerItem;
+        private final String theirServerItem;
+        private final String baseServerItem;
+        private final boolean resolved;
+
+        public TfsConflictInfo(int conflictId, String type, String serverPath, String localPath,
+                               String yourServerItem, String theirServerItem, String baseServerItem, boolean resolved) {
+            this.conflictId = conflictId;
+            this.type = type;
+            this.serverPath = serverPath;
+            this.localPath = localPath;
+            this.yourServerItem = yourServerItem;
+            this.theirServerItem = theirServerItem;
+            this.baseServerItem = baseServerItem;
+            this.resolved = resolved;
+        }
+
+        public int getConflictId() {
+            return conflictId;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public String getServerPath() {
+            return serverPath;
+        }
+
+        public String getLocalPath() {
+            return localPath;
+        }
+
+        public String getYourServerItem() {
+            return yourServerItem;
+        }
+
+        public String getTheirServerItem() {
+            return theirServerItem;
+        }
+
+        public String getBaseServerItem() {
+            return baseServerItem;
+        }
+
+        public boolean isResolved() {
+            return resolved;
+        }
+    }
+
+    public static class TfsConflictResolution {
+        private final int conflictId;
+        private final String resolution;
+        private final boolean resolved;
+        private final int remainingConflicts;
+
+        public TfsConflictResolution(int conflictId, String resolution, boolean resolved, int remainingConflicts) {
+            this.conflictId = conflictId;
+            this.resolution = resolution;
+            this.resolved = resolved;
+            this.remainingConflicts = remainingConflicts;
+        }
+
+        public int getConflictId() {
+            return conflictId;
+        }
+
+        public String getResolution() {
+            return resolution;
+        }
+
+        public boolean isResolved() {
+            return resolved;
+        }
+
+        public int getRemainingConflicts() {
+            return remainingConflicts;
         }
     }
 

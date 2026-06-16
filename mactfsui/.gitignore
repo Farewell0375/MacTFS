@@ -5,3 +5,8 @@
 # React Router
 /.react-router/
 /build/
+
+# electron-builder 打包产物与生成的运行时（体积大，不入库）
+/dist-app/
+/runtime/
+/build-resources/icon.iconset/

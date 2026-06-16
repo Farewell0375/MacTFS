@@ -2,11 +2,19 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* 应用只有亮色主题：保留 class 方案的 dark 变体定义，使组件库模板中残留的
+   dark: 工具类永远不会命中（根节点不再挂 .dark），避免回退到系统媒体查询。 */
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * macOS 原生风设计基建（FE-026）
+ * 基调：系统字体 + macOS 蓝主色 + 中性灰分级 + 半透明材质（vibrancy）变量。
+ * 动效约定：快 150ms / 标准 220ms / 慢 320ms，缓动 ease-out-quart / spring 近似。
+ */
 @theme inline {
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     --font-heading: var(--font-sans);
-    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -38,6 +46,7 @@
     --color-card: var(--card);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
+    /* 圆角档位：macOS 常用 6/8/10/14px（--radius = 10px） */
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -45,75 +54,63 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    /* 阴影分层：卡片极轻 / 浮层轻 / 弹窗（Sheet）明显 */
+    --shadow-card: 0 0 0 0.5px rgb(0 0 0 / 0.03), 0 1px 1px rgb(0 0 0 / 0.04), 0 4px 14px rgb(0 0 0 / 0.06);
+    --shadow-overlay: 0 4px 16px rgb(0 0 0 / 0.1), 0 1px 3px rgb(0 0 0 / 0.06);
+    --shadow-dialog: 0 18px 50px rgb(0 0 0 / 0.22), 0 4px 12px rgb(0 0 0 / 0.1);
+    /* 缓动曲线 */
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    --ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
+    /* 反馈动效：表单错误抖动 */
+    --animate-shake: shake 0.4s var(--ease-out-quart);
+
+    @keyframes shake {
+        10%, 90% { transform: translateX(-1px); }
+        20%, 80% { transform: translateX(2px); }
+        30%, 50%, 70% { transform: translateX(-3px); }
+        40%, 60% { transform: translateX(3px); }
+    }
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    --background: oklch(0.98 0.002 286);
+    --foreground: oklch(0.22 0.006 286);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.22 0.006 286);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.488 0.243 264.376);
-    --primary-foreground: oklch(0.97 0.014 254.604);
-    --secondary: oklch(0.967 0.001 286.375);
-    --secondary-foreground: oklch(0.21 0.006 285.885);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.488 0.243 264.376);
-    --accent-foreground: oklch(0.97 0.014 254.604);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --popover-foreground: oklch(0.22 0.006 286);
+    /* macOS 系统蓝（≈ #007AFF），仅用于主按钮、选中态、状态点 */
+    --primary: oklch(0.585 0.205 256.5);
+    --primary-foreground: oklch(0.99 0.002 286);
+    --secondary: oklch(0.957 0.004 286);
+    --secondary-foreground: oklch(0.22 0.006 286);
+    --muted: oklch(0.957 0.004 286);
+    --muted-foreground: oklch(0.55 0.012 285);
+    /* accent 为中性悬停底色 */
+    --accent: oklch(0.94 0.004 286);
+    --accent-foreground: oklch(0.22 0.006 286);
+    --destructive: oklch(0.59 0.24 27.5);
+    --border: oklch(0.905 0.004 286);
+    --input: oklch(0.905 0.004 286);
+    --ring: oklch(0.62 0.19 256.5);
     --chart-1: oklch(0.809 0.105 251.813);
-    --chart-2: oklch(0.623 0.214 259.815);
-    --chart-3: oklch(0.546 0.245 262.881);
-    --chart-4: oklch(0.488 0.243 264.376);
-    --chart-5: oklch(0.424 0.199 265.638);
-    --radius: 0.875rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.546 0.245 262.881);
-    --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.424 0.199 265.638);
-    --primary-foreground: oklch(0.97 0.014 254.604);
-    --secondary: oklch(0.274 0.006 286.033);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.424 0.199 265.638);
-    --accent-foreground: oklch(0.97 0.014 254.604);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.809 0.105 251.813);
-    --chart-2: oklch(0.623 0.214 259.815);
-    --chart-3: oklch(0.546 0.245 262.881);
-    --chart-4: oklch(0.488 0.243 264.376);
-    --chart-5: oklch(0.424 0.199 265.638);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.623 0.214 259.815);
-    --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --chart-2: oklch(0.7 0.165 254);
+    --chart-3: oklch(0.585 0.205 256.5);
+    --chart-4: oklch(0.5 0.21 259);
+    --chart-5: oklch(0.43 0.19 262);
+    --radius: 0.625rem;
+    /* 侧栏半透明材质：vibrancy 开启时透出窗口毛玻璃，关闭时回退近实色 */
+    --sidebar: oklch(0.962 0.003 286 / 72%);
+    --sidebar-foreground: oklch(0.22 0.006 286);
+    --sidebar-primary: oklch(0.585 0.205 256.5);
+    --sidebar-primary-foreground: oklch(0.99 0.002 286);
+    --sidebar-accent: oklch(0.88 0.005 286 / 80%);
+    --sidebar-border: oklch(0.89 0.004 286);
+    --sidebar-ring: oklch(0.62 0.19 256.5);
+    /* 动效时长：快 / 标准 / 慢 */
+    --motion-fast: 150ms;
+    --motion-base: 220ms;
+    --motion-slow: 320ms;
 }
 
 @layer base {
@@ -126,4 +123,24 @@
   html {
     @apply font-sans;
     }
+}
+
+/* vibrancy 模式（FE-027 在 macOS Electron 下挂载）：页面底透明，毛玻璃从半透明侧栏透出 */
+html.vibrancy,
+html.vibrancy body {
+    background: transparent;
+}
+
+/* 工作台画布底色：比卡片深一档的中性灰，让白色卡片浮起；vibrancy 下半透明透出窗口毛玻璃。 */
+@utility canvas-surface {
+  background-color: oklch(0.934 0.004 286 / 0.85);
+}
+
+/* 隐藏式标题栏下的窗口拖拽区域：顶栏整体可拖动，交互控件单独豁免。 */
+@utility app-drag {
+  -webkit-app-region: drag;
+}
+
+@utility app-no-drag {
+  -webkit-app-region: no-drag;
 }

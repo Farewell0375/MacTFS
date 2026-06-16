@@ -1,216 +1,117 @@
-import { getMactfsBridge } from "~/lib/electron/bridge"
-
-import type { ApiResult } from "./types"
-
-const API_BASE_URL = "http://127.0.0.1:38765"
-
-interface ApiRequestOptions extends Omit<RequestInit, "body" | "headers"> {
-  body?: unknown
-  headers?: HeadersInit
-}
-
-export type ApiRequestLogStatus = "running" | "success" | "error"
-
-export interface ApiRequestLogEntry {
-  id: string
-  operation: string
-  summary: string
-  startedAt: number
-  endedAt?: number
-  durationMs?: number
-  success?: boolean
-  errorMessage?: string
-  status: ApiRequestLogStatus
-  logs?: string[]
-}
-
-type ApiRequestLogListener = (entry: ApiRequestLogEntry) => void
-
-const apiRequestLogListeners = new Set<ApiRequestLogListener>()
-let apiRequestLogIndex = 0
+import { getApiBaseUrl, getToken } from "~/lib/electron"
+import type { ApiRequestOptions, ApiResponse, ApiResult } from "./types"
 
 /**
- * 订阅统一 API client 的请求日志，供底部 Console 展示每次操作状态。
+ * 拼接查询参数到请求路径，自动跳过空值。
  */
-export function subscribeApiRequestLogs(listener: ApiRequestLogListener) {
-  apiRequestLogListeners.add(listener)
-
-  return () => {
-    apiRequestLogListeners.delete(listener)
-  }
-}
-
-/**
- * 向所有日志订阅方发布一条请求状态更新。
- */
-function notifyApiRequestLog(entry: ApiRequestLogEntry) {
-  apiRequestLogListeners.forEach((listener) => listener(entry))
-}
-
-/**
- * 生成本次请求的前端日志 id，用于 running 和完成态更新同一行。
- */
-function nextApiRequestLogId(apiPath: string) {
-  apiRequestLogIndex += 1
-  return `${Date.now()}:${apiRequestLogIndex}:${apiPath}`
-}
-
-/**
- * 从请求体或 query 中提取路径摘要，便于 Console 快速定位操作对象。
- */
-function summarizeApiRequest(apiPath: string, body?: unknown) {
-  if (body && typeof body === "object" && !Array.isArray(body)) {
-    const bodySummary = summarizeRequestBody(body as Record<string, unknown>)
-    if (bodySummary) {
-      return bodySummary
+function buildUrl(
+  baseUrl: string,
+  path: string,
+  query?: ApiRequestOptions["query"],
+): string {
+  const url = new URL(path, baseUrl)
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== null) {
+        url.searchParams.set(key, String(value))
+      }
     }
   }
-
-  const query = apiPath.split("?")[1]
-  return query || apiPath
+  return url.toString()
 }
 
 /**
- * 按后端常用字段生成请求体摘要。
+ * 统一提取错误信息，遵循 errorMessage || message 的展示约定。
  */
-function summarizeRequestBody(body: Record<string, unknown>) {
-  return [
-    "serverPath",
-    "path",
-    "localPath",
-    "paths",
-    "serverPaths",
-    "changeset",
-    "sourceChangeset",
-    "targetChangeset",
-  ]
-    .filter((key) => body[key] !== undefined && body[key] !== "")
-    .map((key) => `${key}=${formatSummaryValue(body[key])}`)
-    .join(" | ")
-}
-
-/**
- * 将摘要字段值转换成单行文本。
- */
-function formatSummaryValue(value: unknown) {
-  return Array.isArray(value) ? value.join(", ") : String(value)
-}
-
-/**
- * 创建前端统一失败响应，供网络或 Electron 桥接不可用时展示明确提示。
- */
-function createFailureResult<TData>(
-  message: string,
-  startedAt = Date.now()
-): ApiResult<TData> {
-  const endedAt = Date.now()
-
-  return {
-    success: false,
-    message,
-    errorMessage: message,
-    operation: "frontendRequest",
-    startedAt,
-    endedAt,
-    durationMs: endedAt - startedAt,
-    logs: [],
-    data: {} as TData,
+function resolveErrorMessage(
+  result: ApiResult<unknown> | null,
+  fallback: string,
+): string {
+  if (result) {
+    return result.errorMessage || result.message || fallback
   }
+  return fallback
 }
 
 /**
- * 将统一 API 响应转换为底部 Console 可展示的日志行。
+ * 发起一次本地 API 请求，自动携带 Bearer Token 并统一封装结果。
  */
-function toApiRequestLogEntry(
-  id: string,
-  summary: string,
-  fallbackStartedAt: number,
-  result: ApiResult<unknown>
-): ApiRequestLogEntry {
-  return {
-    id,
-    operation: result.operation,
-    summary,
-    startedAt: result.startedAt || fallbackStartedAt,
-    endedAt: result.endedAt,
-    durationMs: result.durationMs,
-    success: result.success,
-    errorMessage: result.errorMessage || (result.success ? "" : result.message),
-    status: result.success ? "success" : "error",
-    logs: result.logs,
+async function request<T = Record<string, unknown>>(
+  method: string,
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<ApiResponse<T>> {
+  const baseUrl = await getApiBaseUrl()
+  const token = await getToken()
+  const headers: Record<string, string> = {
+    Accept: "application/json",
   }
-}
-
-/**
- * 通过统一 API client 调用本地 Java API，并自动附加 Bearer token。
- */
-export async function apiRequest<TData>(
-  apiPath: string,
-  options: ApiRequestOptions = {}
-): Promise<ApiResult<TData>> {
-  const startedAt = Date.now()
-  const logId = nextApiRequestLogId(apiPath)
-  const summary = summarizeApiRequest(apiPath, options.body)
-
-  notifyApiRequestLog({
-    id: logId,
-    operation: apiPath,
-    summary,
-    startedAt,
-    status: "running",
-  })
-
-  const bridge = getMactfsBridge()
-  if (!bridge) {
-    const result = createFailureResult<TData>(
-      "未检测到 Electron preload，无法读取本地 API token。",
-      startedAt
-    )
-    notifyApiRequestLog(
-      toApiRequestLogEntry(logId, summary, startedAt, result)
-    )
-    return result
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+  const init: RequestInit = { method, headers, signal: options.signal }
+  if (options.body !== undefined) {
+    headers["Content-Type"] = "application/json;charset=utf-8"
+    init.body = JSON.stringify(options.body)
   }
 
-  const token = await bridge.getToken()
-  if (!token) {
-    const result = createFailureResult<TData>(
-      "未找到本地 API token，请确认本地服务已启动。",
-      startedAt
-    )
-    notifyApiRequestLog(
-      toApiRequestLogEntry(logId, summary, startedAt, result)
-    )
-    return result
-  }
-
+  let response: Response
   try {
-    const headers = new Headers(options.headers)
-    headers.set("Authorization", `Bearer ${token}`)
-    if (options.body !== undefined) {
-      headers.set("Content-Type", "application/json")
-    }
-
-    const response = await fetch(`${API_BASE_URL}${apiPath}`, {
-      ...options,
-      headers,
-      body:
-        options.body === undefined ? undefined : JSON.stringify(options.body),
-    })
-
-    const result = (await response.json()) as ApiResult<TData>
-    notifyApiRequestLog(
-      toApiRequestLogEntry(logId, summary, startedAt, result)
-    )
-    return result
+    response = await fetch(buildUrl(baseUrl, path, options.query), init)
   } catch (error) {
-    const result = createFailureResult<TData>(
-      error instanceof Error ? error.message : "本地 API 请求失败。",
-      startedAt
-    )
-    notifyApiRequestLog(
-      toApiRequestLogEntry(logId, summary, startedAt, result)
-    )
-    return result
+    const message = error instanceof Error ? error.message : String(error)
+    return {
+      ok: false,
+      status: 0,
+      result: null,
+      data: null,
+      errorMessage: `无法连接本地服务：${message}`,
+    }
   }
+
+  let result: ApiResult<T> | null = null
+  try {
+    result = (await response.json()) as ApiResult<T>
+  } catch {
+    result = null
+  }
+
+  const ok = response.ok && result?.success === true
+  return {
+    ok,
+    status: response.status,
+    result,
+    data: result?.data ?? null,
+    errorMessage: ok
+      ? null
+      : resolveErrorMessage(result, `请求失败（HTTP ${response.status}）`),
+  }
+}
+
+// 统一 API 客户端，组件只通过本对象访问后端，不直接 fetch、不直接读 token。
+export const apiClient = {
+  /**
+   * 发起 GET 请求。
+   */
+  get<T = Record<string, unknown>>(path: string, options?: ApiRequestOptions) {
+    return request<T>("GET", path, options)
+  },
+  /**
+   * 发起 POST 请求。
+   */
+  post<T = Record<string, unknown>>(path: string, options?: ApiRequestOptions) {
+    return request<T>("POST", path, options)
+  },
+  /**
+   * 发起 PUT 请求。
+   */
+  put<T = Record<string, unknown>>(path: string, options?: ApiRequestOptions) {
+    return request<T>("PUT", path, options)
+  },
+  /**
+   * 发起 DELETE 请求。
+   */
+  delete<T = Record<string, unknown>>(path: string, options?: ApiRequestOptions) {
+    return request<T>("DELETE", path, options)
+  },
 }

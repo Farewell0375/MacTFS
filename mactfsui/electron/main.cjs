@@ -1,8 +1,357 @@
-const { app, BrowserWindow, dialog, ipcMain } = require("electron")
-const { spawn } = require("node:child_process")
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage, protocol } = require("electron")
+const path = require("node:path")
 const fs = require("node:fs")
 const os = require("node:os")
-const path = require("node:path")
+const http = require("node:http")
+const { spawn } = require("node:child_process")
+
+const API_HOST = "127.0.0.1"
+const API_PORT = 38765
+const API_BASE_URL = `http://${API_HOST}:${API_PORT}`
+const SERVER_MAIN_CLASS = "com.mydev.mactfs.server.MacTfsServer"
+const TOKEN_FILE = path.join(os.homedir(), ".mactfs", "server-token")
+const HEALTH_TIMEOUT_MS = 2000
+const START_POLL_TIMES = 30
+const START_POLL_INTERVAL_MS = 1000
+
+// 自定义协议：以 app://bundle/ 提供前端静态资源。
+// 打包后构建产物使用绝对路径(/assets/...)，用 file:// 会指向磁盘根目录导致白屏，故走自定义协议从 build/client 映射。
+const APP_SCHEME = "app"
+const APP_ORIGIN = `${APP_SCHEME}://bundle/`
+const MIME_BY_EXT = {
+  ".html": "text/html",
+  ".js": "text/javascript",
+  ".mjs": "text/javascript",
+  ".css": "text/css",
+  ".json": "application/json",
+  ".map": "application/json",
+  ".ico": "image/x-icon",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+  ".webp": "image/webp",
+  ".ttf": "font/ttf",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".wasm": "application/wasm",
+}
+
+// 必须在 app ready 之前注册自定义协议的特权（标准协议 + 安全上下文）。
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: APP_SCHEME,
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+  },
+])
+
+/**
+ * 注册 app:// 协议处理器：把请求路径映射到 build/client 下的静态文件，找不到时回退到 index.html（适配前端路由）。
+ */
+function registerAppProtocol() {
+  const clientRoot = path.join(__dirname, "..", "build", "client")
+  protocol.handle(APP_SCHEME, async (request) => {
+    let relativePath = decodeURIComponent(new URL(request.url).pathname)
+    if (!relativePath || relativePath === "/") {
+      relativePath = "/index.html"
+    }
+    let filePath = path.normalize(path.join(clientRoot, relativePath))
+    if (!filePath.startsWith(clientRoot) || !fs.existsSync(filePath)) {
+      filePath = path.join(clientRoot, "index.html")
+    }
+    const data = await fs.promises.readFile(filePath)
+    const contentType = MIME_BY_EXT[path.extname(filePath).toLowerCase()] || "application/octet-stream"
+    return new Response(data, { headers: { "content-type": contentType } })
+  })
+}
+
+// 记录由本进程拉起的服务端子进程，便于应用退出时回收。
+let serverProcess = null
+
+/**
+ * 计算项目根目录，main.cjs 位于 mactfsui/electron 下，上溯两级即为单仓库根目录。
+ */
+function resolveProjectRoot() {
+  return path.resolve(__dirname, "..", "..")
+}
+
+// 服务端 JVM 固定使用 x64：TFS 的 JNI 原生库（libnative_*.jnilib）只含 i386/x86_64，无 arm64 切片，
+// 用 arm64 JVM 加载会 UnsatisfiedLinkError。Apple Silicon 上 x64 JVM 经 Rosetta 2 运行；
+// 服务端是 IO 密集型，Rosetta 开销可接受。UI（Electron）走 universal 原生，已解决界面卡顿。
+const PACKAGED_JRE_DIR = "jre-x64"
+const DEV_JDK_DIR = "zulu8.94.0.17-ca-jdk8.0.492-macosx_x64"
+
+/**
+ * 解析运行服务端使用的 Java 可执行文件：固定 x64 内置 zulu8，其次 JAVA_HOME，最后 PATH 上的 java。
+ */
+function resolveJavaBin() {
+  // 打包态：x64 JRE 随 extraResources 落在 Resources/jre-x64 下。
+  if (app.isPackaged) {
+    const packaged = path.join(process.resourcesPath, PACKAGED_JRE_DIR, "bin", "java")
+    if (fs.existsSync(packaged)) {
+      return packaged
+    }
+    // 兼容旧单架构包结构（Resources/jre）。
+    const legacy = path.join(process.resourcesPath, "jre", "bin", "java")
+    if (fs.existsSync(legacy)) {
+      return legacy
+    }
+  }
+  const projectRoot = resolveProjectRoot()
+  const bundled = path.join(projectRoot, DEV_JDK_DIR, "Contents", "Home", "bin", "java")
+  if (fs.existsSync(bundled)) {
+    return bundled
+  }
+  if (process.env.JAVA_HOME) {
+    const fromHome = path.join(process.env.JAVA_HOME, "bin", "java")
+    if (fs.existsSync(fromHome)) {
+      return fromHome
+    }
+  }
+  return "java"
+}
+
+/**
+ * 解析服务端 classpath，优先使用 application 安装包 lib 目录（已包含全部运行依赖）。
+ */
+function resolveServerClasspath() {
+  // 打包态：服务端 jar 随 extraResources 落在 Resources/server/lib 下。
+  if (app.isPackaged) {
+    const packagedLib = path.join(process.resourcesPath, "server", "lib")
+    if (fs.existsSync(packagedLib)) {
+      return path.join(packagedLib, "*")
+    }
+  }
+  const installLib = path.join(
+    resolveProjectRoot(),
+    "mactfs",
+    "build",
+    "install",
+    "mactfs",
+    "lib",
+  )
+  if (fs.existsSync(installLib)) {
+    return path.join(installLib, "*")
+  }
+  return null
+}
+
+/**
+ * 解析 TFS native 库目录，供 SDK 加载 JNI 库。
+ */
+function resolveNativeDirectory() {
+  // 打包态：JNI native 库随服务端 lib 一起落在 Resources/server/lib/native 下。
+  if (app.isPackaged) {
+    const packagedNative = path.join(process.resourcesPath, "server", "lib", "native")
+    if (fs.existsSync(packagedNative)) {
+      return packagedNative
+    }
+  }
+  const projectRoot = resolveProjectRoot()
+  const installNative = path.join(
+    projectRoot,
+    "mactfs",
+    "build",
+    "install",
+    "mactfs",
+    "lib",
+    "native",
+  )
+  if (fs.existsSync(installNative)) {
+    return installNative
+  }
+  const libNative = path.join(projectRoot, "tfsIntegration", "lib", "native")
+  if (fs.existsSync(libNative)) {
+    return libNative
+  }
+  return null
+}
+
+/**
+ * 读取本地 Bearer Token，渲染进程不直接访问 token 文件，统一由主进程提供。
+ */
+function readToken() {
+  try {
+    const value = fs.readFileSync(TOKEN_FILE, "utf8").trim()
+    return value.length > 0 ? value : null
+  } catch (error) {
+    return null
+  }
+}
+
+/**
+ * 延时辅助函数，用于轮询等待服务端就绪。
+ */
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * 调用 /api/health 检查本地服务是否就绪，返回结构化服务状态。
+ */
+function checkHealth() {
+  return new Promise((resolve) => {
+    const token = readToken()
+    const base = {
+      running: false,
+      baseUrl: API_BASE_URL,
+      tokenAvailable: token != null,
+      health: null,
+      error: null,
+    }
+    if (!token) {
+      resolve({ ...base, error: "未找到本地服务 token，服务可能尚未启动" })
+      return
+    }
+    const request = http.request(
+      `${API_BASE_URL}/api/health`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: HEALTH_TIMEOUT_MS,
+      },
+      (response) => {
+        let raw = ""
+        response.on("data", (chunk) => {
+          raw += chunk
+        })
+        response.on("end", () => {
+          if (response.statusCode !== 200) {
+            resolve({ ...base, error: `服务返回状态码 ${response.statusCode}` })
+            return
+          }
+          try {
+            const payload = JSON.parse(raw)
+            resolve({
+              ...base,
+              running: payload.success === true,
+              health: payload.data || null,
+            })
+          } catch (error) {
+            resolve({ ...base, error: "服务健康检查响应解析失败" })
+          }
+        })
+      },
+    )
+    request.on("timeout", () => {
+      request.destroy()
+      resolve({ ...base, error: "服务健康检查超时" })
+    })
+    request.on("error", (error) => {
+      resolve({ ...base, error: `无法连接本地服务：${error.message}` })
+    })
+    request.end()
+  })
+}
+
+/**
+ * 按本地开发约定拉起 mactfs-server，并轮询等待服务就绪。
+ */
+async function startService() {
+  const current = await checkHealth()
+  if (current.running) {
+    return current
+  }
+  const classpath = resolveServerClasspath()
+  if (!classpath) {
+    return {
+      ...current,
+      error:
+        "未找到服务端构建产物，请先在 mactfs 目录执行 ../tfsIntegration/gradlew installDist",
+    }
+  }
+  if (!serverProcess || serverProcess.exitCode !== null) {
+    const args = ["-cp", classpath]
+    const nativeDirectory = resolveNativeDirectory()
+    if (nativeDirectory) {
+      args.push(`-Dcom.microsoft.tfs.jni.native.base-directory=${nativeDirectory}`)
+    }
+    args.push(SERVER_MAIN_CLASS)
+    serverProcess = spawn(resolveJavaBin(), args, {
+      cwd: app.isPackaged ? process.resourcesPath : path.join(resolveProjectRoot(), "mactfs"),
+      stdio: "ignore",
+    })
+    serverProcess.on("exit", () => {
+      serverProcess = null
+    })
+  }
+  for (let attempt = 0; attempt < START_POLL_TIMES; attempt += 1) {
+    await delay(START_POLL_INTERVAL_MS)
+    const status = await checkHealth()
+    if (status.running) {
+      return status
+    }
+  }
+  return {
+    ...current,
+    error: "服务启动超时，请检查 JDK 与服务端构建产物",
+  }
+}
+
+/**
+ * 批量检测本地绝对路径是否存在，供渲染层展示“已映射未下载”状态。
+ */
+function pathsExist(paths) {
+  const result = {}
+  if (!Array.isArray(paths)) {
+    return result
+  }
+  for (const target of paths) {
+    if (typeof target === "string" && target.length > 0) {
+      result[target] = fs.existsSync(target)
+    }
+  }
+  return result
+}
+
+/**
+ * 注册渲染进程通过 preload 调用的窄接口，集中暴露 token、服务状态与目录选择能力。
+ */
+function registerIpcHandlers() {
+  ipcMain.handle("mactfs:get-api-base-url", () => API_BASE_URL)
+  ipcMain.handle("mactfs:get-token", () => readToken())
+  ipcMain.handle("mactfs:get-service-status", () => checkHealth())
+  ipcMain.handle("mactfs:start-service", () => startService())
+  ipcMain.handle("mactfs:select-directory", async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ["openDirectory", "createDirectory"],
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+    return result.filePaths[0]
+  })
+  ipcMain.handle("mactfs:paths-exist", (event, paths) => pathsExist(paths))
+  ipcMain.handle("mactfs:reveal-path", async (event, targetPath, isFolder) => {
+    if (typeof targetPath !== "string" || targetPath.length === 0 || !fs.existsSync(targetPath)) {
+      return false
+    }
+    // 目录直接进入访达中的该目录，文件则在访达中定位并选中。
+    if (isFolder) {
+      const error = await shell.openPath(targetPath)
+      return error === ""
+    }
+    shell.showItemInFolder(targetPath)
+    return true
+  })
+}
+
+/**
+ * 解析应用图标路径：开发态用 public/logo.png，打包态用构建产物中的 logo.png。
+ */
+function resolveAppIcon() {
+  const candidates = [
+    path.join(__dirname, "..", "public", "logo.png"),
+    path.join(__dirname, "..", "build", "client", "logo.png"),
+  ]
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate
+    }
+  }
+  return null
+}
 
 const API_BASE_URL = "http://127.0.0.1:38765"
 const HEALTH_URL = `${API_BASE_URL}/api/health`
@@ -20,14 +369,38 @@ let serviceStartError = ""
  * 创建 Electron 主窗口，开发环境加载本地服务，生产环境加载构建后的静态页面。
  */
 function createWindow() {
+  const iconPath = resolveAppIcon()
+  const isMac = process.platform === "darwin"
   const mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1280,
+    height: 840,
+    minWidth: 980,
+    minHeight: 640,
+    title: "MacTFS",
+    // 预设背景并延迟显示，避免启动白闪；macOS 下背景透明以透出 vibrancy 毛玻璃。
+    show: false,
+    backgroundColor: isMac ? "#00000000" : "#f9f9fa",
+    // macOS 隐藏系统标题栏 + 窗口级毛玻璃材质；其它平台回退系统标题栏与实色背景。
+    ...(isMac
+      ? {
+          titleBarStyle: "hiddenInset",
+          trafficLightPosition: { x: 16, y: 16 },
+          vibrancy: "sidebar",
+          visualEffectState: "followWindow",
+        }
+      : {}),
+    ...(iconPath ? { icon: nativeImage.createFromPath(iconPath) } : {}),
     webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
-      preload: path.join(__dirname, "preload.cjs"),
     },
+  })
+
+  mainWindow.once("ready-to-show", () => {
+    // 启动即铺满当前屏幕可视区域（保留程序坞与菜单栏，非独立全屏 Space）。
+    mainWindow.maximize()
+    mainWindow.show()
   })
 
   if (process.env.NODE_ENV === "development") {
@@ -35,191 +408,20 @@ function createWindow() {
     return
   }
 
-  mainWindow.loadFile(path.join(__dirname, "../build/client/index.html"))
+  // 生产/打包态走自定义协议，保证前端的绝对资源路径(/assets/...)可被正确解析。
+  mainWindow.loadURL(APP_ORIGIN)
 }
 
-/**
- * 读取 Java API 服务生成的本地 Bearer token，供 preload 和 health 检查复用。
- */
-function readServerToken() {
-  if (!fs.existsSync(TOKEN_FILE)) {
-    return ""
-  }
-
-  return fs.readFileSync(TOKEN_FILE, "utf8").trim()
-}
-
-/**
- * 调用本地 API health 接口，确认服务、token 和连接状态是否可用。
- */
-async function checkServiceHealth() {
-  const token = readServerToken()
-  if (!token) {
-    return {
-      baseUrl: API_BASE_URL,
-      running: false,
-      connected: false,
-      message: "未找到本地 API token，正在尝试启动服务。",
-      tokenFile: TOKEN_FILE,
-    }
-  }
-
-  try {
-    const response = await fetch(HEALTH_URL, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-    const result = await response.json()
-
-    if (!response.ok || !result.success) {
-      return {
-        baseUrl: API_BASE_URL,
-        running: false,
-        connected: false,
-        message:
-          result.errorMessage || result.message || "本地 API health 检查失败。",
-        tokenFile: TOKEN_FILE,
-      }
-    }
-
-    return {
-      baseUrl: API_BASE_URL,
-      running: true,
-      connected: Boolean(result.data.connected),
-      message: result.message || "ok",
-      tokenFile: result.data.tokenFile || TOKEN_FILE,
-      configFile: result.data.configFile,
-      javaArch: result.data.javaArch,
-      nativeCompatible: result.data.nativeCompatible,
-    }
-  } catch (error) {
-    return {
-      baseUrl: API_BASE_URL,
-      running: false,
-      connected: false,
-      message: error instanceof Error ? error.message : "本地 API 服务未响应。",
-      tokenFile: TOKEN_FILE,
-    }
-  }
-}
-
-/**
- * 在开发环境下通过已有 Gradle runServer 任务拉起本地 Java API 服务。
- */
-function startLocalService() {
-  if (serviceStartAttempted) {
-    return
-  }
-
-  serviceStartAttempted = true
-  if (!fs.existsSync(RUN_SERVER_SCRIPT)) {
-    serviceStartError = `未找到后端启动脚本：${RUN_SERVER_SCRIPT}`
-    return
-  }
-  if (!fs.existsSync(path.join(BUNDLED_JDK_HOME, "bin", "java"))) {
-    serviceStartError = `未找到项目内置 JDK：${BUNDLED_JDK_HOME}`
-    return
-  }
-
-  const child = spawn(RUN_SERVER_SCRIPT, [], {
-    cwd: MACTFS_DIRECTORY,
-    detached: true,
-    env: serviceEnvironment(),
-    stdio: "ignore",
-  })
-
-  child.on("error", (error) => {
-    serviceStartError = error.message
-  })
-  child.unref()
-}
-
-/**
- * TFS SDK 随带的 macOS JNI 库只有 x86_64，没有 arm64；Apple Silicon 下必须通过 Rosetta 启动 Java。
- */
-function shouldUseRosettaJava() {
-  return process.platform === "darwin" && process.arch === "arm64"
-}
-
-/**
- * 固定本项目随带的 x64 Zulu JDK，避免 Electron 继承系统 arm64 Java 导致 TFS JNI 加载失败。
- */
-function serviceEnvironment() {
-  return {
-    ...process.env,
-    JAVA_HOME: BUNDLED_JDK_HOME,
-    PATH: `${path.join(BUNDLED_JDK_HOME, "bin")}${path.delimiter}${
-      process.env.PATH || ""
-    }`,
-  }
-}
-
-/**
- * 等待一小段时间后重试 health，用于覆盖 Java 服务启动过程。
- */
-function delay(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
-
-/**
- * 确保本地 API 服务可用；未运行时先启动，再轮询 health 返回最终状态。
- */
-async function ensureServiceStatus() {
-  let status = await checkServiceHealth()
-  if (status.running) {
-    return status
-  }
-
-  startLocalService()
-  for (let index = 0; index < 30; index += 1) {
-    await delay(1000)
-    status = await checkServiceHealth()
-    if (status.running) {
-      return {
-        ...status,
-        started: true,
-      }
-    }
-  }
-
-  return {
-    ...status,
-    started: serviceStartAttempted,
-    message:
-      serviceStartError ||
-      (shouldUseRosettaJava()
-        ? `本地 API 服务未就绪。请确认 Rosetta 可用，项目内置 JDK 路径为：${BUNDLED_JDK_HOME}`
-        : "本地 API 服务未就绪，请确认 Java 8、Gradle 和 TFS 依赖可用。"),
-  }
-}
-
-/**
- * 打开系统目录选择器，返回用户选择的本地目录。
- */
-async function selectDirectory() {
-  const window = BrowserWindow.getFocusedWindow()
-  const result = await dialog.showOpenDialog(window || undefined, {
-    properties: ["openDirectory", "createDirectory"],
-  })
-
-  return result.canceled ? null : result.filePaths[0]
-}
-
-/**
- * 注册 renderer 可调用的最小 Electron 桥接接口。
- */
-function registerIpcHandlers() {
-  ipcMain.handle("mactfs:get-token", () => readServerToken())
-  ipcMain.handle("mactfs:get-service-status", () => ensureServiceStatus())
-  ipcMain.handle("mactfs:select-directory", () => selectDirectory())
-}
+app.setName("MacTFS")
 
 app.whenReady().then(() => {
+  // macOS 程序坞图标在开发态需要显式设置（BrowserWindow icon 仅对 Windows / Linux 生效）。
+  const iconPath = resolveAppIcon()
+  if (process.platform === "darwin" && iconPath && app.dock) {
+    app.dock.setIcon(nativeImage.createFromPath(iconPath))
+  }
+  registerAppProtocol()
   registerIpcHandlers()
-  ensureServiceStatus()
   createWindow()
 
   app.on("activate", () => {
@@ -232,5 +434,13 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit()
+  }
+})
+
+// 应用退出时回收由本进程拉起的服务端，避免遗留孤儿进程。
+app.on("will-quit", () => {
+  if (serverProcess && serverProcess.exitCode === null) {
+    serverProcess.kill()
+    serverProcess = null
   }
 })

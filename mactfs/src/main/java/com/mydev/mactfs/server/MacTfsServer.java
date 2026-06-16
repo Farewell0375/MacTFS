@@ -10,12 +10,14 @@ import com.mydev.mactfs.core.MacTfsCoreService.CoreOperationResult;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsCheckinResult;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsCollectionInfo;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsConflictInfo;
+import com.mydev.mactfs.core.MacTfsCoreService.TfsConflictResolution;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsConnectionConfig;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsFileContent;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsFileOperationResult;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsFolderDiffItem;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsGetLatestResult;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsHistoryEntry;
+import com.mydev.mactfs.core.MacTfsCoreService.TfsItemInfo;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsMappingInfo;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsPendingChangeInfo;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsServerItem;
@@ -50,7 +52,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * macTFS 第二阶段本地 API 服务入口，负责 HTTP 路由、Token 校验、配置、会话、日志和超时控制。
+ * MacTFS 第二阶段本地 API 服务入口，负责 HTTP 路由、Token 校验、配置、会话、日志和超时控制。
  */
 public class MacTfsServer {
 
@@ -92,8 +94,8 @@ public class MacTfsServer {
         registerFilters();
         registerRoutes();
         Spark.awaitInitialization();
-        System.out.println("macTFS API server listening on http://" + HOST + ":" + PORT);
-        System.out.println("macTFS token file: " + tokenStore.getTokenFile().getAbsolutePath());
+        System.out.println("MacTFS API server listening on http://" + HOST + ":" + PORT);
+        System.out.println("MacTFS token file: " + tokenStore.getTokenFile().getAbsolutePath());
     }
 
     /**
@@ -288,24 +290,25 @@ public class MacTfsServer {
             }
         }));
 
-        Spark.post("/api/workspace/context", (request, response) -> handle(request, response, "workspaceContext", TIMEOUT_DIRECTORY_MS, new ApiCallable() {
+        Spark.get("/api/workspace/context", (request, response) -> handle(request, response, "workspaceContext", TIMEOUT_DIRECTORY_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {
-                Map<String, Object> body = readBody(request);
-                AppConfig config = requestConfig(body);
-                String collection = require(configValue(body, "collection", config.collection), "collection");
-                CoreOperationResult<TfsWorkspaceInfo> result = coreService.ensureWorkspace(toTfsConfig(config), collection, stringValue(body, "workspace"), "mactfs default workspace");
-                if (result.isSuccess() && result.getData() != null) {
-                    config.collection = collection;
-                    config.workspace = result.getData().getName();
-                    config.mappings = mappingConfigs(result.getData().getMappings());
-                    configStore.save(config);
-                    sessionManager.setConfig(config);
-                }
+                AppConfig config = requestConfig(new LinkedHashMap<String, Object>());
+                Map<String, Object> context = new LinkedHashMap<String, Object>();
+                context.put("serverUri", config.serverUri);
+                context.put("authType", config.authType);
+                context.put("collection", config.collection);
+                context.put("workspace", config.workspace);
+                context.put("connected", Boolean.valueOf(sessionManager.isConnected()));
                 Map<String, Object> data = new LinkedHashMap<String, Object>();
-                data.put("collection", collection);
-                data.put("workspace", result.getData());
-                data.put("mappings", result.getData() == null || result.getData().getMappings() == null ? Collections.emptyList() : result.getData().getMappings());
+                if (isBlank(config.collection) || isBlank(config.workspace)) {
+                    context.put("mappings", config.mappings);
+                    data.put("context", context);
+                    return ApiResult.success("success", data);
+                }
+                CoreOperationResult<List<TfsMappingInfo>> result = coreService.listMappings(toTfsConfig(config), config.collection, config.workspace);
+                context.put("mappings", result.getData() == null ? Collections.emptyList() : result.getData());
+                data.put("context", context);
                 return fromCore(result, data);
             }
         }));
@@ -323,6 +326,26 @@ public class MacTfsServer {
                 Map<String, Object> data = new LinkedHashMap<String, Object>();
                 data.put("mappings", result.getData() == null ? Collections.emptyList() : result.getData());
                 return fromCore(result, data);
+            }
+        }));
+
+        Spark.post("/api/mappings/check-target", (request, response) -> handle(request, response, "checkMappingTarget", TIMEOUT_DEFAULT_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                String serverPath = require(stringValue(body, "serverPath"), "serverPath");
+                String localParentPath = require(stringValue(body, "localParentPath"), "localParentPath");
+                String name = lastPathSegment(serverPath);
+                File target = new File(localParentPath, name);
+                boolean exists = target.exists();
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("serverPath", serverPath);
+                data.put("localParentPath", localParentPath);
+                data.put("name", name);
+                data.put("targetPath", target.getAbsolutePath());
+                data.put("exists", Boolean.valueOf(exists));
+                data.put("allowed", Boolean.valueOf(!exists));
+                return ApiResult.success("success", data);
             }
         }));
 
@@ -379,7 +402,23 @@ public class MacTfsServer {
             public ApiResult call(Request request) throws Exception {
                 Map<String, Object> body = readBody(request);
                 AppConfig config = requestConfig(body);
-                CoreOperationResult<TfsGetLatestResult> result = coreService.getLatest(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), stringValue(body, "serverPath"), booleanValue(body, "recursive", true));
+                CoreOperationResult<TfsGetLatestResult> result = coreService.getLatest(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), stringValue(body, "serverPath"), booleanValue(body, "recursive", true), booleanValue(body, "force", false));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("result", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
+        Spark.post("/api/files/get-version", (request, response) -> handle(request, response, "getVersion", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                Number changeset = (Number) body.get("changeset");
+                if (changeset == null) {
+                    throw new IllegalArgumentException("changeset is required");
+                }
+                CoreOperationResult<TfsGetLatestResult> result = coreService.getVersion(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "serverPath"), "serverPath"), changeset.intValue(), booleanValue(body, "recursive", true));
                 Map<String, Object> data = new LinkedHashMap<String, Object>();
                 data.put("result", result.getData());
                 return fromCore(result, data);
@@ -435,10 +474,100 @@ public class MacTfsServer {
             }
         }));
 
-        Spark.post("/api/conflicts/apply", (request, response) -> handle(request, response, "applyConflictChoice", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
+        Spark.get("/api/files/merge-candidates", (request, response) -> handle(request, response, "mergeCandidates", TIMEOUT_HISTORY_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {
-                return applyConflictChoice(request);
+                AppConfig config = requestConfig(new LinkedHashMap<String, Object>());
+                CoreOperationResult<List<TfsHistoryEntry>> result = coreService.mergeCandidates(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(request.queryParams("sourceServerPath"), "sourceServerPath"), require(request.queryParams("targetServerPath"), "targetServerPath"));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("candidates", result.getData() == null ? Collections.emptyList() : result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
+        Spark.post("/api/files/merge", (request, response) -> handle(request, response, "merge", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                Number changeset = (Number) body.get("changeset");
+                CoreOperationResult<TfsGetLatestResult> result = coreService.merge(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "sourceServerPath"), "sourceServerPath"), require(stringValue(body, "targetServerPath"), "targetServerPath"), changeset == null ? null : Integer.valueOf(changeset.intValue()));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("result", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
+        Spark.post("/api/files/branch", (request, response) -> handle(request, response, "branch", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                Number changeset = (Number) body.get("changeset");
+                CoreOperationResult<TfsFileOperationResult> result = coreService.branch(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "sourceServerPath"), "sourceServerPath"), require(stringValue(body, "targetServerPath"), "targetServerPath"), changeset == null ? null : Integer.valueOf(changeset.intValue()));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("result", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
+        Spark.post("/api/files/rollback", (request, response) -> handle(request, response, "rollback", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                Number changeset = (Number) body.get("changeset");
+                if (changeset == null) {
+                    throw new IllegalArgumentException("changeset is required");
+                }
+                CoreOperationResult<TfsGetLatestResult> result = coreService.rollback(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "serverPath"), "serverPath"), require(stringValue(body, "mode"), "mode"), changeset.intValue());
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("result", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
+        Spark.post("/api/files/rename", (request, response) -> handle(request, response, "rename", TIMEOUT_DEFAULT_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                CoreOperationResult<TfsFileOperationResult> result = coreService.rename(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "serverPath"), "serverPath"), require(stringValue(body, "newName"), "newName"));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("result", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
+        Spark.get("/api/files/content", (request, response) -> handle(request, response, "fileContent", TIMEOUT_DIFF_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                AppConfig config = requestConfig(new LinkedHashMap<String, Object>());
+                String localPath = request.queryParams("localPath");
+                CoreOperationResult<TfsFileContent> result;
+                if (localPath != null && localPath.trim().length() > 0) {
+                    result = coreService.getLocalFileContent(localPath);
+                } else {
+                    String changeset = request.queryParams("changeset");
+                    Integer changesetId = changeset == null || changeset.trim().isEmpty()
+                        ? null
+                        : Integer.valueOf(Integer.parseInt(changeset.trim()));
+                    result = coreService.getFileContent(toTfsConfig(config), require(config.collection, "collection"), require(request.queryParams("serverPath"), "serverPath"), changesetId);
+                }
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("content", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
+        Spark.get("/api/items/info", (request, response) -> handle(request, response, "itemInfo", TIMEOUT_DEFAULT_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                AppConfig config = requestConfig(new LinkedHashMap<String, Object>());
+                CoreOperationResult<TfsItemInfo> result = coreService.getItemInfo(toTfsConfig(config), require(config.collection, "collection"), require(request.queryParams("serverPath"), "serverPath"));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("item", result.getData());
+                return fromCore(result, data);
             }
         }));
 
@@ -467,12 +596,36 @@ public class MacTfsServer {
             }
         }));
 
+        Spark.get("/api/conflicts", (request, response) -> handle(request, response, "listConflicts", TIMEOUT_DEFAULT_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                AppConfig config = requestConfig(new LinkedHashMap<String, Object>());
+                boolean recursive = !"false".equalsIgnoreCase(request.queryParams("recursive"));
+                CoreOperationResult<List<TfsConflictInfo>> result = coreService.listConflicts(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), splitPaths(request.queryParams("serverPath")), recursive);
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("conflicts", result.getData() == null ? Collections.emptyList() : result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
+        Spark.post("/api/conflicts/apply", (request, response) -> handle(request, response, "applyConflict", TIMEOUT_LONG_WRITE_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                Map<String, Object> body = readBody(request);
+                AppConfig config = requestConfig(body);
+                CoreOperationResult<TfsConflictResolution> result = coreService.applyConflict(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), intValue(body, "conflictId"), require(stringValue(body, "resolution"), "resolution"));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("resolution", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
         Spark.post("/api/compare/folder", (request, response) -> handle(request, response, "compareFolder", TIMEOUT_COMPARE_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {
                 Map<String, Object> body = readBody(request);
                 AppConfig config = requestConfig(body);
-                CoreOperationResult<List<TfsFolderDiffItem>> result = coreService.compareFolder(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "serverPath"), "serverPath"), stringValue(body, "localPath"), booleanValue(body, "recursive", true));
+                CoreOperationResult<List<TfsFolderDiffItem>> result = coreService.compareFolder(toTfsConfig(config), require(config.collection, "collection"), require(config.workspace, "workspace"), require(stringValue(body, "serverPath"), "serverPath"), stringValue(body, "localPath"), booleanValue(body, "recursive", true), booleanValue(body, "includeLocalOnly", true));
                 Map<String, Object> data = new LinkedHashMap<String, Object>();
                 data.put("diffs", result.getData() == null ? Collections.emptyList() : result.getData());
                 return fromCore(result, data);
@@ -867,6 +1020,18 @@ public class MacTfsServer {
             result.add(data);
         }
         return result;
+    }
+
+    /**
+     * 取服务端路径的最后一段，作为 Mapping 目标目录名预校验依据。
+     */
+    private String lastPathSegment(String serverPath) {
+        String normalized = serverPath.trim();
+        while (normalized.length() > 1 && normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        int index = normalized.lastIndexOf('/');
+        return index < 0 ? normalized : normalized.substring(index + 1);
     }
 
     /**

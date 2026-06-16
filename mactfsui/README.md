@@ -1,21 +1,14 @@
-# React Router + shadcn/ui
+# mactfsui
 
-This is a template for a new React Router project with React, TypeScript, and shadcn/ui.
+macTFS 的 Electron + React 桌面前端。完整的项目介绍、截图、环境要求与使用说明请见仓库根目录的 [README](../README.md)。
 
-## Adding components
-
-To add components to your app, run the following command:
+## 常用命令
 
 ```bash
-npx shadcn@latest add button
+pnpm install            # 安装依赖
+pnpm electron:dev       # 开发模式（vite + Electron，自动拉起后端）
+pnpm prepare:runtime    # 准备 x64 JDK（本地缺失时自动从 Azul 下载）
+pnpm dist               # 打包 macOS 桌面应用到 dist-app/
 ```
 
-This will place the ui components in the `components` directory.
-
-## Using components
-
-To use the components in your app, import them as follows:
-
-```tsx
-import { Button } from "@/components/ui/button";
-```
+启动 / 停止 / 重启 / 排错见根目录的 [`服务启停指南.md`](../服务启停指南.md)。

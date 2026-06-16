@@ -1,272 +1,286 @@
-import { apiRequest } from "./client"
-
+import { apiClient } from "./client"
 import type {
   AppConfig,
-  AddMappingData,
-  AddMappingRequest,
-  ApplyConflictChoiceRequest,
-  CheckinData,
-  CheckinRequest,
-  ChangesetFilesData,
-  CompareFolderData,
-  CompareFolderRequest,
-  CollectionsData,
-  FileOperationData,
-  FileOperationRequest,
-  ConfigData,
-  ConnectData,
-  DiffLocalLatestRequest,
-  DiffRevisionsRequest,
-  FileContentData,
-  FileContentRequest,
-  GetLatestData,
-  GetLatestRequest,
-  HistoryData,
-  MappingsData,
-  MappingsRequest,
-  OperationLogsData,
-  PendingChangesData,
-  PendingChangesRequest,
-  ServerTreeData,
-  TextDiffData,
-  WorkspaceContextData,
-  WorkspaceContextRequest,
+  CheckMappingTargetResult,
+  CheckinResult,
+  Collection,
+  ConflictInfo,
+  ConflictResolution,
+  ConflictResolutionResult,
+  ConnectResult,
+  FileContent,
+  FileOperationResult,
+  FolderDiffItem,
+  GetLatestResult,
+  HistoryEntry,
+  ItemInfo,
+  MappingInfo,
+  OperationLogEntry,
+  PendingChange,
+  ServerItem,
+  TextDiff,
+  WorkspaceContext,
+  WorkspaceInfo,
 } from "./types"
 
+// 文件类操作（checkout / add / delete / undo）的统一请求体。
+type FileActionBody = { paths: string[]; recursive?: boolean }
+
 /**
- * 读取后端保存的默认连接配置，用于再次打开时回填表单。
+ * 读取服务端持久化配置。
  */
 export function getConfig() {
-  return apiRequest<ConfigData>("/api/config")
+  return apiClient.get<{ config: AppConfig }>("/api/config")
 }
 
 /**
- * 提交连接配置给后端；连接成功时后端会保存为默认配置。
+ * 保存服务端持久化配置。
  */
-export function connectSession(config: AppConfig) {
-  return apiRequest<ConnectData>("/api/session/connect", {
-    method: "POST",
-    body: config,
-  })
+export function saveConfig(config: AppConfig) {
+  return apiClient.put<{ config: AppConfig }>("/api/config", { body: config })
 }
 
 /**
- * 加载当前连接可见的 TFS Collection 列表。
+ * 使用给定连接信息连接 TFS，成功后服务端会保存配置并建立会话。
+ */
+export function connect(config: Partial<AppConfig> = {}) {
+  return apiClient.post<ConnectResult>("/api/session/connect", { body: config })
+}
+
+/**
+ * 列出当前账号可见的 Collection。
  */
 export function listCollections() {
-  return apiRequest<CollectionsData>("/api/collections")
+  return apiClient.get<{ collections: Collection[] }>("/api/collections")
 }
 
 /**
- * 固定当前 Collection 并自动使用或创建本机默认 Workspace。
+ * 浏览服务端目录树节点。
  */
-export function ensureWorkspaceContext(request: WorkspaceContextRequest) {
-  return apiRequest<WorkspaceContextData>("/api/workspace/context", {
-    method: "POST",
-    body: request,
-  })
+export function getServerTree(params: { path?: string; collection?: string } = {}) {
+  return apiClient.get<{ path: string; items: ServerItem[] }>("/api/server-tree", { query: params })
 }
 
 /**
- * 加载指定 Collection 和服务端路径下的目录节点。
+ * 读取当前目录下一级文件与文件夹列表。
  */
-export function listServerTree(path: string, collection?: string) {
-  const params = new URLSearchParams({ path })
-  if (collection) {
-    params.set("collection", collection)
-  }
-
-  return apiRequest<ServerTreeData>(`/api/server-tree?${params.toString()}`)
+export function getFolderItems(params: { path?: string; collection?: string } = {}) {
+  return apiClient.get<{ path: string; items: ServerItem[] }>("/api/server-folder/items", { query: params })
 }
 
 /**
- * 加载当前 Workspace 的 Mapping 列表，用于判断服务端项是否已映射到本地。
+ * 读取当前 Workspace 名称与 Mapping 列表。
  */
-export function listMappings(request: MappingsRequest = {}) {
-  const params = new URLSearchParams()
-  if (request.collection) {
-    params.set("collection", request.collection)
-  }
-
-  const query = params.toString()
-  return apiRequest<MappingsData>(
-    query ? `/api/mappings?${query}` : "/api/mappings"
-  )
+export function getWorkspace() {
+  return apiClient.get<{ workspace: string; mappings: MappingInfo[] }>("/api/workspace")
 }
 
 /**
- * 加载指定目录下一级文件和文件夹，供中间文件列表展示。
+ * 确保当前 Collection 的默认 Workspace 存在，必要时创建。
  */
-export function listServerFolderItems(path: string, collection?: string) {
-  const params = new URLSearchParams({ path })
-  if (collection) {
-    params.set("collection", collection)
-  }
-
-  return apiRequest<ServerTreeData>(
-    `/api/server-folder/items?${params.toString()}`
-  )
+export function ensureWorkspace(body: { collection?: string; workspace?: string; comment?: string } = {}) {
+  return apiClient.post<{ workspace: WorkspaceInfo }>("/api/workspace/ensure", { body })
 }
 
 /**
- * 创建服务端路径到本地目录的 Mapping，可选择保存后立即 Get Latest。
+ * 读取工作台固定上下文（serverUri / collection / workspace / mappings）。
  */
-export function addMapping(request: AddMappingRequest) {
-  return apiRequest<AddMappingData>("/api/mappings", {
-    method: "POST",
-    body: request,
-  })
+export function getWorkspaceContext() {
+  return apiClient.get<{ context: WorkspaceContext }>("/api/workspace/context")
 }
 
 /**
- * 对已映射目录执行元数据级目录对比，返回差异文件状态列表。
+ * 读取当前 Workspace 的 Mapping 列表。
  */
-export function compareFolder(request: CompareFolderRequest) {
-  return apiRequest<CompareFolderData>("/api/compare/folder", {
-    method: "POST",
-    body: request,
-  })
+export function listMappings() {
+  return apiClient.get<{ mappings: MappingInfo[] }>("/api/mappings")
 }
 
 /**
- * 查询当前 Workspace 的挂起更改列表，供右侧 Inspector 分组展示。
+ * 预校验 Mapping 目标路径，返回最终本地目标路径及是否已存在。
  */
-export function listPendingChanges(request: PendingChangesRequest = {}) {
-  const params = new URLSearchParams()
-  if (request.collection) {
-    params.set("collection", request.collection)
-  }
-  if (request.serverPath) {
-    params.set("serverPath", request.serverPath)
-  }
-
-  const query = params.toString()
-  return apiRequest<PendingChangesData>(
-    query ? `/api/pending-changes?${query}` : "/api/pending-changes"
-  )
+export function checkMappingTarget(body: { serverPath: string; localParentPath: string }) {
+  return apiClient.post<CheckMappingTargetResult>("/api/mappings/check-target", { body })
 }
 
 /**
- * 获取指定服务端路径的最新版本，目录按 recursive 参数递归。
+ * 创建 Mapping，可选立即 Get Latest。
  */
-export function getLatest(request: GetLatestRequest) {
-  return apiRequest<GetLatestData>("/api/files/get-latest", {
-    method: "POST",
-    body: request,
-  })
+export function addMapping(body: { serverPath: string; localPath: string; getLatest?: boolean }) {
+  return apiClient.post<{ mapping: MappingInfo; getLatest?: GetLatestResult }>("/api/mappings", { body })
 }
 
 /**
- * 读取映射目录内本地文件或未映射文件的服务器 latest 内容。
+ * 删除 Mapping，仅解除映射不删除本地文件。
  */
-export function getFileContent(request: FileContentRequest) {
-  return apiRequest<FileContentData>("/api/files/content", {
-    method: "POST",
-    body: request,
-  })
+export function deleteMapping(body: { serverPath?: string; localPath?: string }) {
+  return apiClient.delete<{ mappings: MappingInfo[] }>("/api/mappings", { body })
 }
 
 /**
- * 对已映射且本地存在的文件或目录执行 checkout。
+ * 获取指定服务端路径的最新文件。
+ * force=false（默认）为安全模式，本地改动会产生冲突而不被覆盖；force=true 强制覆盖本地。
  */
-export function checkoutFiles(request: FileOperationRequest) {
-  return apiRequest<FileOperationData>("/api/files/checkout", {
-    method: "POST",
-    body: request,
-  })
+export function getLatest(body: { serverPath?: string; recursive?: boolean; force?: boolean } = {}) {
+  return apiClient.post<{ result: GetLatestResult }>("/api/files/get-latest", { body })
+}
+
+/**
+ * 获取指定 changeset 版本并覆盖本地（对应 VS 的 Get Specific Version + Overwrite）。
+ */
+export function getVersion(body: { serverPath: string; changeset: number; recursive?: boolean }) {
+  return apiClient.post<{ result: GetLatestResult }>("/api/files/get-version", { body })
+}
+
+/**
+ * 对已存在文件或目录执行 checkout。
+ */
+export function checkout(body: FileActionBody) {
+  return apiClient.post<{ result: FileOperationResult }>("/api/files/checkout", { body })
 }
 
 /**
  * 将本地新增文件加入 pending add。
  */
-export function addFiles(request: FileOperationRequest) {
-  return apiRequest<FileOperationData>("/api/files/add", {
-    method: "POST",
-    body: request,
-  })
+export function addFiles(body: FileActionBody) {
+  return apiClient.post<{ result: FileOperationResult }>("/api/files/add", { body })
 }
 
 /**
  * 对已版本控制文件或目录执行 pending delete。
  */
-export function deleteFiles(request: FileOperationRequest) {
-  return apiRequest<FileOperationData>("/api/files/delete", {
-    method: "POST",
-    body: request,
-  })
+export function deleteFiles(body: FileActionBody) {
+  return apiClient.post<{ result: FileOperationResult }>("/api/files/delete", { body })
 }
 
 /**
- * 撤销指定路径上的 pending changes。
+ * 撤销指定路径上的挂起更改。
  */
-export function undoFiles(request: FileOperationRequest) {
-  return apiRequest<FileOperationData>("/api/files/undo", {
-    method: "POST",
-    body: request,
-  })
+export function undoFiles(body: FileActionBody) {
+  return apiClient.post<{ result: FileOperationResult }>("/api/files/undo", { body })
 }
 
 /**
- * 应用 Get Latest / Checkout 冲突弹窗中的单文件选择。
+ * 重命名文件或目录（同目录改名），产生 rename 挂起更改。
  */
-export function applyConflictChoice(request: ApplyConflictChoiceRequest) {
-  return apiRequest<FileOperationData>("/api/conflicts/apply", {
-    method: "POST",
-    body: request,
-  })
+export function renameFile(body: { serverPath: string; newName: string }) {
+  return apiClient.post<{ result: FileOperationResult }>("/api/files/rename", { body })
 }
 
 /**
- * 将 Included Changes 对应的 serverPaths 提交到 TFS。
+ * 回滚变更集（只产生挂起更改）：single 仅反做该 changeset，toVersion 反做其后全部改动。
  */
-export function checkin(request: CheckinRequest) {
-  return apiRequest<CheckinData>("/api/checkin", {
-    method: "POST",
-    body: request,
-  })
+export function rollback(body: { serverPath: string; mode: "single" | "toVersion"; changeset: number }) {
+  return apiClient.post<{ result: GetLatestResult }>("/api/files/rollback", { body })
 }
 
 /**
- * 查询文件或目录最近历史记录。
+ * 分支：把源路径分叉到目标路径（产生 branch 挂起更改），changeset 缺省为 latest。
  */
-export function queryHistory(path: string, folder: boolean) {
-  const params = new URLSearchParams({ path, folder: String(folder) })
-  return apiRequest<HistoryData>(`/api/history?${params.toString()}`)
+export function branch(body: { sourceServerPath: string; targetServerPath: string; changeset?: number }) {
+  return apiClient.post<{ result: FileOperationResult }>("/api/files/branch", { body })
+}
+
+/**
+ * 查询源 → 目标的待合并变更集候选列表。
+ */
+export function mergeCandidates(params: { sourceServerPath: string; targetServerPath: string }) {
+  return apiClient.get<{ candidates: HistoryEntry[] }>("/api/files/merge-candidates", { query: params })
+}
+
+/**
+ * 合并：源 → 目标（产生挂起更改，冲突走冲突处理），changeset 缺省为合并全部候选。
+ */
+export function merge(body: { sourceServerPath: string; targetServerPath: string; changeset?: number }) {
+  return apiClient.post<{ result: GetLatestResult }>("/api/files/merge", { body })
+}
+
+/**
+ * 读取当前 Workspace 的挂起更改。
+ */
+export function getPendingChanges(params: { serverPath?: string } = {}) {
+  return apiClient.get<{ pendingChanges: PendingChange[] }>("/api/pending-changes", { query: params })
+}
+
+/**
+ * 提交带注释的签入，paths 为空时签入全部挂起更改。
+ */
+export function checkin(body: { paths?: string[]; comment: string }) {
+  return apiClient.post<{ checkin: CheckinResult }>("/api/checkin", { body })
+}
+
+/**
+ * 读取服务端对象（文件或目录）的属性信息，供属性弹窗展示。
+ */
+export function getItemInfo(params: { serverPath: string }) {
+  return apiClient.get<{ item: ItemInfo }>("/api/items/info", { query: params })
+}
+
+/**
+ * 读取服务器内容（latest 或指定 changeset），或读取本地映射文件内容。
+ */
+export function getFileContent(params: { serverPath?: string; localPath?: string; changeset?: number }) {
+  return apiClient.get<{ content: FileContent }>("/api/files/content", { query: params })
+}
+
+/**
+ * 对已映射目录执行目录对比。
+ * includeLocalOnly=false 时跳过本地全量扫描，仅本地存在的项（如 node_modules）不计入差异。
+ */
+export function compareFolder(body: {
+  serverPath: string
+  localPath?: string
+  recursive?: boolean
+  includeLocalOnly?: boolean
+}) {
+  return apiClient.post<{ diffs: FolderDiffItem[] }>("/api/compare/folder", { body })
+}
+
+/**
+ * 查询文件或目录历史。
+ */
+export function getHistory(params: { path: string; folder?: boolean }) {
+  return apiClient.get<{ history: HistoryEntry[] }>("/api/history", { query: params })
 }
 
 /**
  * 查询指定 changeset 影响的文件列表。
  */
-export function queryChangesetFiles(changeset: number) {
-  const params = new URLSearchParams({ changeset: String(changeset) })
-  return apiRequest<ChangesetFilesData>(
-    `/api/history/changeset?${params.toString()}`
-  )
+export function getChangesetFiles(params: { changeset: number }) {
+  return apiClient.get<{ files: HistoryEntry[] }>("/api/history/changeset", { query: params })
 }
 
 /**
- * 生成本地文件和服务器 latest 之间的文本 diff。
+ * 生成本地文件与服务器 latest 的文本 Diff。
  */
-export function diffLocalLatest(request: DiffLocalLatestRequest) {
-  return apiRequest<TextDiffData>("/api/diff/local-latest", {
-    method: "POST",
-    body: request,
-  })
+export function diffLocalLatest(body: { serverPath: string; localPath: string }) {
+  return apiClient.post<{ diff: TextDiff }>("/api/diff/local-latest", { body })
 }
 
 /**
- * 生成同一服务端文件两个历史版本之间的文本 diff。
+ * 生成同一服务端文件两个 changeset 之间的文本 Diff。
  */
-export function diffRevisions(request: DiffRevisionsRequest) {
-  return apiRequest<TextDiffData>("/api/diff/revisions", {
-    method: "POST",
-    body: request,
-  })
+export function diffRevisions(body: { serverPath: string; sourceChangeset: number; targetChangeset: number }) {
+  return apiClient.post<{ diff: TextDiff }>("/api/diff/revisions", { body })
 }
 
 /**
- * 读取本地 API 服务最近操作日志，供底部 Console 手动刷新。
+ * 查询当前 Workspace 的冲突明细。
  */
-export function listOperationLogs() {
-  return apiRequest<OperationLogsData>("/api/logs")
+export function listConflicts(params: { serverPath?: string; recursive?: boolean } = {}) {
+  return apiClient.get<{ conflicts: ConflictInfo[] }>("/api/conflicts", { query: params })
+}
+
+/**
+ * 对单个冲突应用取舍（采用服务器版本或保留本地版本）。
+ */
+export function applyConflict(body: { conflictId: number; resolution: ConflictResolution }) {
+  return apiClient.post<{ resolution: ConflictResolutionResult }>("/api/conflicts/apply", { body })
+}
+
+/**
+ * 读取最近操作日志。
+ */
+export function getLogs() {
+  return apiClient.get<{ logs: OperationLogEntry[] }>("/api/logs")
 }

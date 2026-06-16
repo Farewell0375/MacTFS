@@ -35,19 +35,19 @@
 - 常用 API 调试命令
 - 保留必要的本地验证能力
 
-## 阶段 4：Frontend
+## 阶段 4：Frontend Workspace UI
 
-目标：实现类 Visual Studio 的桌面 UI。
+目标：实现以固定 Collection / Workspace 上下文为核心的桌面工作台。
 
 输出：
 
-- Electron 启动本地服务
-- 登录配置
-- 左侧 Collection 服务端目录树
-- 中间目录文件列表
-- 右侧挂起更改
-- 底部操作日志
-- Mapping、目录对比、文件操作、历史、Diff、签入
+- Electron 启动本地服务、preload、API client
+- 登录配置、Collection 选择、默认 Workspace 上下文
+- 三栏工作台、底部操作台、左右与底部收起能力
+- 左侧服务端目录树与中间目录文件列表同步导航
+- 对象右键菜单与统一动作模型
+- Mapping、History、目录对比、文件查看、Diff、冲突处理弹窗
+- Pending Changes、Checkin、操作反馈和日志展示
 
 ## 阶段 5：Frontend Refactor
 

@@ -18,6 +18,8 @@ dependencies {
     implementation 'com.sparkjava:spark-core:2.9.4'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.5'
     implementation 'org.slf4j:slf4j-simple:1.7.36'
+    // 文本 Diff 算法库（Myers 算法），4.12 为兼容 Java 8 的稳定版本。
+    implementation 'io.github.java-diff-utils:java-diff-utils:4.12'
 }
 
 application {
