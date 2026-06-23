@@ -51,6 +51,13 @@ export interface ConnectResult {
   collectionCount?: number
 }
 
+// 连接测试结果，对应 /api/session/test（只读探测）；coreDurationMs 为本次回连耗时。
+export interface TestConnectionResult {
+  serverUri?: string
+  collectionCount?: number
+  coreDurationMs?: number
+}
+
 // Collection 信息，对应 core TfsCollectionInfo。
 export interface Collection {
   name: string

@@ -76,6 +76,105 @@ let mcpProcess = null
 // 标记应用是否正在退出，用于区分「主动退出」与「子进程崩溃需重拉」。
 let appQuitting = false
 
+// MCP 运行状态与日志环形缓冲：供「MCP 状态」弹窗展示，最多保留最近 500 行。
+const MCP_LOG_MAX_LINES = 500
+const MCP_SSE_URL = `http://${MCP_HOST}:${MCP_PORT}/sse`
+const MCP_HEALTHZ_URL = `http://${MCP_HOST}:${MCP_PORT}/healthz`
+const mcpLogBuffer = []
+const mcpLineRemainder = { stdout: "", stderr: "" }
+let mcpStartedAt = 0
+let mcpRestartCount = 0
+let mcpLastExitCode = null
+let mcpLastError = null
+
+/**
+ * 向环形缓冲追加一行 MCP 日志，超出上限时丢弃最旧的行。
+ */
+function pushMcpLine(stream, line) {
+  if (typeof line !== "string" || line.length === 0) {
+    return
+  }
+  mcpLogBuffer.push({ ts: Date.now(), stream, line })
+  if (mcpLogBuffer.length > MCP_LOG_MAX_LINES) {
+    mcpLogBuffer.splice(0, mcpLogBuffer.length - MCP_LOG_MAX_LINES)
+  }
+}
+
+/**
+ * 按行切分子进程输出（保留跨 chunk 的半行余量），逐行写入缓冲。
+ */
+function appendMcpLog(stream, chunk) {
+  const combined = (mcpLineRemainder[stream] || "") + chunk.toString()
+  const parts = combined.split(/\r?\n/)
+  mcpLineRemainder[stream] = parts.pop() || ""
+  for (const part of parts) {
+    pushMcpLine(stream, part)
+  }
+}
+
+/**
+ * 把残留的半行刷入缓冲（用于进程退出时收尾）。
+ */
+function flushMcpRemainder() {
+  for (const stream of ["stdout", "stderr"]) {
+    if (mcpLineRemainder[stream]) {
+      pushMcpLine(stream, mcpLineRemainder[stream])
+      mcpLineRemainder[stream] = ""
+    }
+  }
+}
+
+/**
+ * 探测 MCP 的 /healthz 是否可达，返回 { ok, body? }，不抛异常。
+ */
+function pingMcpHealthz() {
+  return new Promise((resolve) => {
+    const request = http.request(MCP_HEALTHZ_URL, { method: "GET", timeout: 1500 }, (response) => {
+      let raw = ""
+      response.on("data", (chunk) => {
+        raw += chunk
+      })
+      response.on("end", () => {
+        if (response.statusCode !== 200) {
+          resolve({ ok: false })
+          return
+        }
+        try {
+          resolve({ ok: true, body: JSON.parse(raw) })
+        } catch (error) {
+          resolve({ ok: true })
+        }
+      })
+    })
+    request.on("timeout", () => {
+      request.destroy()
+      resolve({ ok: false })
+    })
+    request.on("error", () => resolve({ ok: false }))
+    request.end()
+  })
+}
+
+/**
+ * 汇总 MCP 当前状态：进程是否在跑、pid、运行时长、重启次数，并探活 /healthz。
+ */
+async function getMcpStatus() {
+  const running = !!(mcpProcess && mcpProcess.exitCode === null)
+  const healthz = running ? await pingMcpHealthz() : { ok: false }
+  return {
+    running,
+    healthy: healthz.ok,
+    pid: running ? mcpProcess.pid : null,
+    sseUrl: MCP_SSE_URL,
+    startedAt: mcpStartedAt || null,
+    uptimeMs: running && mcpStartedAt ? Date.now() - mcpStartedAt : 0,
+    restartCount: mcpRestartCount,
+    lastExitCode: mcpLastExitCode,
+    lastError: mcpLastError,
+    entryResolved: resolveMcpEntry() != null,
+  }
+}
+
 /**
  * 计算项目根目录，main.cjs 位于 mactfsui/electron 下，上溯两级即为单仓库根目录。
  */
@@ -323,9 +422,14 @@ function startMcp() {
   }
   const entry = resolveMcpEntry()
   if (!entry) {
-    console.error("[mactfs] 未找到 MCP 入口，跳过启动（开发态请先在 mactfs-mcp 执行 pnpm build）")
+    mcpLastError = "未找到 MCP 入口（开发态请先在 mactfs-mcp 执行 pnpm build）"
+    pushMcpLine("stderr", `[mactfs] ${mcpLastError}`)
+    console.error(`[mactfs] ${mcpLastError}`)
     return
   }
+  mcpLastError = null
+  mcpStartedAt = Date.now()
+  // stdout/stderr 改为管道捕获，写入环形缓冲供 UI 查看（原来是 ignore，日志被丢弃）。
   mcpProcess = spawn(process.execPath, [entry], {
     cwd: path.dirname(entry),
     env: {
@@ -336,11 +440,26 @@ function startMcp() {
       MACTFS_TOKEN_FILE: TOKEN_FILE,
       MACTFS_MCP_PORT: String(MCP_PORT),
     },
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"],
   })
-  mcpProcess.on("exit", () => {
+  pushMcpLine("stdout", `[mactfs] 已拉起 MCP 子进程 pid=${mcpProcess.pid}`)
+  if (mcpProcess.stdout) {
+    mcpProcess.stdout.on("data", (chunk) => appendMcpLog("stdout", chunk))
+  }
+  if (mcpProcess.stderr) {
+    mcpProcess.stderr.on("data", (chunk) => appendMcpLog("stderr", chunk))
+  }
+  mcpProcess.on("error", (error) => {
+    mcpLastError = error.message
+    pushMcpLine("stderr", `[mactfs] MCP 子进程启动失败：${error.message}`)
+  })
+  mcpProcess.on("exit", (code, signal) => {
+    flushMcpRemainder()
+    mcpLastExitCode = code
     mcpProcess = null
+    pushMcpLine("stderr", `[mactfs] MCP 子进程退出 code=${code} signal=${signal ?? ""}`)
     if (!appQuitting) {
+      mcpRestartCount += 1
       setTimeout(startMcp, MCP_RESTART_DELAY_MS)
     }
   })
@@ -370,6 +489,8 @@ function registerIpcHandlers() {
   ipcMain.handle("mactfs:get-token", () => readToken())
   ipcMain.handle("mactfs:get-service-status", () => checkHealth())
   ipcMain.handle("mactfs:start-service", () => startService())
+  ipcMain.handle("mactfs:get-mcp-status", () => getMcpStatus())
+  ipcMain.handle("mactfs:get-mcp-logs", () => mcpLogBuffer.slice())
   ipcMain.handle("mactfs:select-directory", async () => {
     const result = await dialog.showOpenDialog({
       properties: ["openDirectory", "createDirectory"],

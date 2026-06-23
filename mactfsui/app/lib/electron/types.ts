@@ -17,6 +17,27 @@ export interface ServiceStatus {
   error: string | null
 }
 
+// MCP 子进程运行状态，由 Electron 主进程汇总（含 /healthz 探活）。
+export interface McpStatus {
+  running: boolean
+  healthy: boolean
+  pid: number | null
+  sseUrl: string
+  startedAt: number | null
+  uptimeMs: number
+  restartCount: number
+  lastExitCode: number | null
+  lastError: string | null
+  entryResolved: boolean
+}
+
+// MCP 单行运行日志（来自子进程 stdout/stderr）。
+export interface McpLogEntry {
+  ts: number
+  stream: "stdout" | "stderr"
+  line: string
+}
+
 // preload 暴露到 window.mactfs 的窄接口契约。
 export interface MactfsBridge {
   isElectron: true
@@ -27,6 +48,8 @@ export interface MactfsBridge {
   selectDirectory(): Promise<string | null>
   pathsExist(paths: string[]): Promise<Record<string, boolean>>
   revealPath(targetPath: string, isFolder: boolean): Promise<boolean>
+  getMcpStatus(): Promise<McpStatus>
+  getMcpLogs(): Promise<McpLogEntry[]>
 }
 
 declare global {

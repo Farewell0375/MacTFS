@@ -18,6 +18,7 @@ import type {
   OperationLogEntry,
   PendingChange,
   ServerItem,
+  TestConnectionResult,
   TextDiff,
   WorkspaceContext,
   WorkspaceInfo,
@@ -45,6 +46,14 @@ export function saveConfig(config: AppConfig) {
  */
 export function connect(config: Partial<AppConfig> = {}) {
   return apiClient.post<ConnectResult>("/api/session/connect", { body: config })
+}
+
+/**
+ * 只读探测当前 TFS 连接是否仍可用（真正回连一次），不改变会话/配置状态。
+ * 供顶栏「连接测试」手动触发；成功返回 serverUri / collectionCount / 耗时。
+ */
+export function testTfsConnection() {
+  return apiClient.post<TestConnectionResult>("/api/session/test")
 }
 
 /**

@@ -45,4 +45,16 @@ contextBridge.exposeInMainWorld("mactfs", {
   revealPath(targetPath, isFolder) {
     return ipcRenderer.invoke("mactfs:reveal-path", targetPath, isFolder)
   },
+  /**
+   * 查询 MCP 子进程运行状态（含 /healthz 探活）。
+   */
+  getMcpStatus() {
+    return ipcRenderer.invoke("mactfs:get-mcp-status")
+  },
+  /**
+   * 读取 MCP 子进程运行日志（最近 500 行）。
+   */
+  getMcpLogs() {
+    return ipcRenderer.invoke("mactfs:get-mcp-logs")
+  },
 })

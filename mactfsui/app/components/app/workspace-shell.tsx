@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 
+import { McpStatusDialog } from "~/components/app/mcp-status-dialog"
 import { TopBar, type PanelVisibility } from "~/components/app/top-bar"
 import { WorkspaceDialogs } from "~/components/app/workspace-dialogs"
 import { FolderItemsPanel } from "~/components/explorer/folder-items-panel"
@@ -42,6 +43,8 @@ export function WorkspaceShell({
   const [logsRefreshToken, setLogsRefreshToken] = useState(0)
   // 工作区集中管理弹窗显隐。
   const [manageOpen, setManageOpen] = useState(false)
+  // MCP 状态弹窗显隐。
+  const [mcpOpen, setMcpOpen] = useState(false)
 
   /**
    * 切换指定面板的展开 / 收起状态。
@@ -95,6 +98,7 @@ export function WorkspaceShell({
           onTogglePanel={togglePanel}
           onReconnect={onReconnect}
           onManageWorkspace={() => setManageOpen(true)}
+          onOpenMcpStatus={() => setMcpOpen(true)}
         />
 
         <div className="flex min-h-0 flex-1 px-2 pb-2">
@@ -185,6 +189,8 @@ export function WorkspaceShell({
             }}
           />
         )}
+
+        {mcpOpen && <McpStatusDialog onClose={() => setMcpOpen(false)} />}
 
         <Toaster />
       </div>

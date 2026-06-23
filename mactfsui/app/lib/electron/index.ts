@@ -1,7 +1,9 @@
-export type { MactfsBridge, ServiceHealth, ServiceStatus } from "./types"
+export type { MactfsBridge, McpLogEntry, McpStatus, ServiceHealth, ServiceStatus } from "./types"
 export {
   getApiBaseUrl,
   getBridge,
+  getMcpLogs,
+  getMcpStatus,
   getServiceStatus,
   getToken,
   isElectron,

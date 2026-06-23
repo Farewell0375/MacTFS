@@ -1,11 +1,17 @@
-import { FolderCog, PanelBottom, PanelLeft, PanelRight, Unplug } from "lucide-react"
+import { Activity, FolderCog, Loader2, PanelBottom, PanelLeft, PanelRight, PlugZap, Unplug } from "lucide-react"
+import { useCallback, useState } from "react"
 
 import { Button } from "~/components/ui/button"
 import { Separator } from "~/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip"
+import { showToast } from "~/components/ui/toaster"
+import { api } from "~/lib/api"
 import { isMacElectron } from "~/lib/platform"
 import type { WorkspaceSession } from "~/lib/tfs/session"
 import { cn } from "~/lib/utils"
+
+// 顶栏 TFS 连接测试的四态：未测 / 测试中 / 正常 / 断开。
+type TfsTestStatus = "idle" | "testing" | "ok" | "fail"
 
 // 三个可折叠面板的显隐状态，由 WorkspaceShell 持有。
 export interface PanelVisibility {
@@ -24,15 +30,47 @@ export function TopBar({
   onTogglePanel,
   onReconnect,
   onManageWorkspace,
+  onOpenMcpStatus,
 }: {
   session: WorkspaceSession
   panels: PanelVisibility
   onTogglePanel: (panel: keyof PanelVisibility) => void
   onReconnect: () => void
   onManageWorkspace: () => void
+  onOpenMcpStatus: () => void
 }) {
   // 隐藏式标题栏下顶栏整体作为拖拽区，并为左上角红绿灯预留空间。
   const macInset = isMacElectron()
+
+  // 连接测试状态：手动触发，真正回连一次 TFS，结果走右上角 toast + 图标变色。
+  const [tfsStatus, setTfsStatus] = useState<TfsTestStatus>("idle")
+
+  const runTfsTest = useCallback(async () => {
+    setTfsStatus("testing")
+    showToast({ id: "tfs-test", kind: "loading", text: "正在测试 TFS 连接…" })
+    const resp = await api.testTfsConnection()
+    if (resp.ok) {
+      setTfsStatus("ok")
+      const ms = resp.data?.coreDurationMs
+      showToast({
+        id: "tfs-test",
+        kind: "success",
+        text: typeof ms === "number" ? `TFS 连接正常（${ms}ms）` : "TFS 连接正常",
+      })
+    } else {
+      setTfsStatus("fail")
+      showToast({ id: "tfs-test", kind: "error", text: `TFS 连接失败：${resp.errorMessage ?? "未知错误"}` })
+    }
+  }, [])
+
+  const tfsTestTip =
+    tfsStatus === "testing"
+      ? "正在测试 TFS 连接…"
+      : tfsStatus === "ok"
+        ? "TFS 连接正常，点击重新测试"
+        : tfsStatus === "fail"
+          ? "TFS 连接异常，点击重新测试"
+          : "测试 TFS 连接"
   return (
     <header
       className={cn(
@@ -85,6 +123,38 @@ export function TopBar({
           <PanelBottom />
         </PanelToggle>
         <Separator orientation="vertical" className="mx-1 h-4!" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              onClick={runTfsTest}
+              disabled={tfsStatus === "testing"}
+              aria-label="测试 TFS 连接"
+            >
+              {tfsStatus === "testing" ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <PlugZap
+                  className={cn(
+                    tfsStatus === "ok" && "text-emerald-500",
+                    tfsStatus === "fail" && "text-red-500",
+                    tfsStatus === "idle" && "text-muted-foreground",
+                  )}
+                />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{tfsTestTip}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button size="icon-sm" variant="ghost" onClick={onOpenMcpStatus} aria-label="MCP 服务状态">
+              <Activity />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">MCP 服务状态与日志</TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button size="icon-sm" variant="ghost" onClick={onManageWorkspace} aria-label="工作区与映射管理">

@@ -221,6 +221,22 @@ public class MacTfsServer {
             }
         }));
 
+        // 只读连通性探测：用当前会话/已存配置真正回连一次 TFS，验证服务是否仍可达、认证是否仍有效。
+        // 不修改任何会话或配置状态，供顶栏「连接测试」手动触发；耗时见返回的 coreDurationMs。
+        Spark.post("/api/session/test", (request, response) -> handle(request, response, "testConnection", TIMEOUT_CONNECT_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                AppConfig config = requestConfig(readBody(request));
+                CoreOperationResult<ConnectionSummary> result = coreService.testConnection(toTfsConfig(config));
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                if (result.getData() != null) {
+                    data.put("serverUri", result.getData().getServerUri());
+                    data.put("collectionCount", Integer.valueOf(result.getData().getCollectionCount()));
+                }
+                return fromCore(result, data);
+            }
+        }));
+
         Spark.get("/api/collections", (request, response) -> handle(request, response, "listCollections", TIMEOUT_DIRECTORY_MS, new ApiCallable() {
             @Override
             public ApiResult call(Request request) throws Exception {

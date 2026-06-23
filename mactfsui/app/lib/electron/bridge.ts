@@ -1,4 +1,4 @@
-import type { MactfsBridge, ServiceStatus } from "./types"
+import type { MactfsBridge, McpLogEntry, McpStatus, ServiceStatus } from "./types"
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:38765"
 
@@ -94,6 +94,39 @@ export async function revealPath(targetPath: string, isFolder: boolean): Promise
     return false
   }
   return bridge.revealPath(targetPath, isFolder)
+}
+
+/**
+ * 查询 MCP 子进程运行状态，非 Electron 环境返回未运行占位。
+ */
+export async function getMcpStatus(): Promise<McpStatus> {
+  const bridge = getBridge()
+  if (!bridge) {
+    return {
+      running: false,
+      healthy: false,
+      pid: null,
+      sseUrl: "http://127.0.0.1:38766/sse",
+      startedAt: null,
+      uptimeMs: 0,
+      restartCount: 0,
+      lastExitCode: null,
+      lastError: "当前不在 Electron 桌面环境，无法访问 MCP 服务",
+      entryResolved: false,
+    }
+  }
+  return bridge.getMcpStatus()
+}
+
+/**
+ * 读取 MCP 子进程运行日志（最近 500 行），非 Electron 环境返回空数组。
+ */
+export async function getMcpLogs(): Promise<McpLogEntry[]> {
+  const bridge = getBridge()
+  if (!bridge) {
+    return []
+  }
+  return bridge.getMcpLogs()
 }
 
 /**
