@@ -4,6 +4,7 @@ import { z } from "zod"
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js"
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 
 import {
   HEALTH_WAIT_INTERVAL_MS,
@@ -215,4 +216,26 @@ export async function startServer(): Promise<void> {
   app.listen(MCP_PORT, MCP_HOST, () => {
     log(`SSE listening on http://${MCP_HOST}:${MCP_PORT}/sse`)
   })
+}
+
+/**
+ * 启动 MCP stdio 服务：供 Codex / Claude 等「以命令启动子进程」方式接入的通用客户端使用。
+ *
+ * 与 SSE 模式的差异：
+ * - 不监听 38766 端口、不起 express，AI 客户端直接通过 stdin/stdout 与本进程通信。
+ * - 直连 38765 Java 后端（tfsClient 已走 MACTFS_API_BASE_URL）；后端未起时工具会返回 notConnected。
+ * - 必须尽快 connect，让客户端的 initialize 握手立即完成，故不在启动时阻塞等待后端，
+ *   仅在后台探测一次后端就绪并打日志（stderr，绝不写 stdout，避免污染 JSON-RPC 通道）。
+ */
+export async function startStdioServer(): Promise<void> {
+  startParentWatchdog()
+
+  void waitForBackend().then((ready) => {
+    log(ready ? "backend ready" : "backend not ready, running in degraded mode (tools will report notConnected)")
+  })
+
+  const mcp = createMcpServer()
+  const transport = new StdioServerTransport()
+  await mcp.connect(transport)
+  log("stdio transport connected")
 }
