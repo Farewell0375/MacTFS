@@ -10,7 +10,8 @@ const API_PORT = 38765
 const API_BASE_URL = `http://${API_HOST}:${API_PORT}`
 const SERVER_MAIN_CLASS = "com.mydev.mactfs.server.MacTfsServer"
 const TOKEN_FILE = path.join(os.homedir(), ".mactfs", "server-token")
-// MCP SSE 服务端口：随客户端拉起、随客户端退出回收，实现「客户端开着才能用」的绑定。
+// MCP SSE 服务地址：随客户端拉起、随客户端退出回收，实现「客户端开着才能用」的绑定。
+const MCP_HOST = "127.0.0.1"
 const MCP_PORT = 38766
 const MCP_RESTART_DELAY_MS = 2000
 const HEALTH_TIMEOUT_MS = 2000
