@@ -10,6 +10,9 @@ const API_PORT = 38765
 const API_BASE_URL = `http://${API_HOST}:${API_PORT}`
 const SERVER_MAIN_CLASS = "com.mydev.mactfs.server.MacTfsServer"
 const TOKEN_FILE = path.join(os.homedir(), ".mactfs", "server-token")
+// MCP SSE 服务端口：随客户端拉起、随客户端退出回收，实现「客户端开着才能用」的绑定。
+const MCP_PORT = 38766
+const MCP_RESTART_DELAY_MS = 2000
 const HEALTH_TIMEOUT_MS = 2000
 const START_POLL_TIMES = 30
 const START_POLL_INTERVAL_MS = 1000
@@ -68,6 +71,10 @@ function registerAppProtocol() {
 
 // 记录由本进程拉起的服务端子进程，便于应用退出时回收。
 let serverProcess = null
+// 记录由本进程拉起的 MCP 子进程；应用退出时一并回收。
+let mcpProcess = null
+// 标记应用是否正在退出，用于区分「主动退出」与「子进程崩溃需重拉」。
+let appQuitting = false
 
 /**
  * 计算项目根目录，main.cjs 位于 mactfsui/electron 下，上溯两级即为单仓库根目录。
@@ -290,6 +297,56 @@ async function startService() {
 }
 
 /**
+ * 解析 MCP 入口脚本：打包态优先 Resources/mcp，开发态用单仓库内 mactfs-mcp/dist。
+ */
+function resolveMcpEntry() {
+  if (app.isPackaged) {
+    const packaged = path.join(process.resourcesPath, "mcp", "index.js")
+    if (fs.existsSync(packaged)) {
+      return packaged
+    }
+  }
+  const dev = path.join(resolveProjectRoot(), "mactfs-mcp", "dist", "index.js")
+  if (fs.existsSync(dev)) {
+    return dev
+  }
+  return null
+}
+
+/**
+ * 拉起 MCP 子进程（用 Electron 自带 Node 运行，避免依赖系统 node）。
+ * 通过 MACTFS_PARENT_PID 让 MCP 看护父进程，父死则自杀；崩溃后自动重拉。
+ */
+function startMcp() {
+  if (mcpProcess && mcpProcess.exitCode === null) {
+    return
+  }
+  const entry = resolveMcpEntry()
+  if (!entry) {
+    console.error("[mactfs] 未找到 MCP 入口，跳过启动（开发态请先在 mactfs-mcp 执行 pnpm build）")
+    return
+  }
+  mcpProcess = spawn(process.execPath, [entry], {
+    cwd: path.dirname(entry),
+    env: {
+      ...process.env,
+      ELECTRON_RUN_AS_NODE: "1",
+      MACTFS_PARENT_PID: String(process.pid),
+      MACTFS_API_BASE_URL: API_BASE_URL,
+      MACTFS_TOKEN_FILE: TOKEN_FILE,
+      MACTFS_MCP_PORT: String(MCP_PORT),
+    },
+    stdio: "ignore",
+  })
+  mcpProcess.on("exit", () => {
+    mcpProcess = null
+    if (!appQuitting) {
+      setTimeout(startMcp, MCP_RESTART_DELAY_MS)
+    }
+  })
+}
+
+/**
  * 批量检测本地绝对路径是否存在，供渲染层展示“已映射未下载”状态。
  */
 function pathsExist(paths) {
@@ -411,6 +468,8 @@ app.whenReady().then(() => {
   registerAppProtocol()
   registerIpcHandlers()
   createWindow()
+  // 随客户端拉起 MCP；它会自行等待后端就绪，端口随客户端退出而消失。
+  startMcp()
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -425,8 +484,13 @@ app.on("window-all-closed", () => {
   }
 })
 
-// 应用退出时回收由本进程拉起的服务端，避免遗留孤儿进程。
+// 应用退出时回收由本进程拉起的服务端与 MCP，避免遗留孤儿进程。
 app.on("will-quit", () => {
+  appQuitting = true
+  if (mcpProcess && mcpProcess.exitCode === null) {
+    mcpProcess.kill()
+    mcpProcess = null
+  }
   if (serverProcess && serverProcess.exitCode === null) {
     serverProcess.kill()
     serverProcess = null

@@ -14,6 +14,7 @@ import com.mydev.mactfs.core.MacTfsCoreService.TfsConflictResolution;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsConnectionConfig;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsFileContent;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsFileOperationResult;
+import com.mydev.mactfs.core.MacTfsCoreService.TfsFileStatus;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsFolderDiffItem;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsGetLatestResult;
 import com.mydev.mactfs.core.MacTfsCoreService.TfsHistoryEntry;
@@ -529,6 +530,22 @@ public class MacTfsServer {
                 }
                 Map<String, Object> data = new LinkedHashMap<String, Object>();
                 data.put("content", result.getData());
+                return fromCore(result, data);
+            }
+        }));
+
+        Spark.get("/api/files/status", (request, response) -> handle(request, response, "fileStatus", TIMEOUT_DEFAULT_MS, new ApiCallable() {
+            @Override
+            public ApiResult call(Request request) throws Exception {
+                AppConfig config = requestConfig(new LinkedHashMap<String, Object>());
+                CoreOperationResult<TfsFileStatus> result = coreService.fileStatus(
+                    toTfsConfig(config),
+                    require(config.collection, "collection"),
+                    require(config.workspace, "workspace"),
+                    require(request.queryParams("localPath"), "localPath")
+                );
+                Map<String, Object> data = new LinkedHashMap<String, Object>();
+                data.put("status", result.getData());
                 return fromCore(result, data);
             }
         }));

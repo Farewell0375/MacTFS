@@ -1,0 +1,31 @@
+{
+  "name": "mactfs-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MacTFS MCP 服务：让任意 AI 客户端在改文件前自动校验并签出 TFS 文件。与 MacTFS 桌面客户端绑定运行。",
+  "type": "module",
+  "bin": {
+    "mactfs-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "express": "^4.21.2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

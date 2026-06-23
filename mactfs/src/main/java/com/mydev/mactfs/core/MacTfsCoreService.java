@@ -805,6 +805,120 @@ public class MacTfsCoreService {
     }
 
     /**
+     * 查询单个本地文件的 TFS 状态（是否映射 / 是否已签出 / 本地与最新版本对比），
+     * 供 MCP 在 AI 改文件前做执行前校验。整条逻辑复用目录对比的状态判定。
+     */
+    public CoreOperationResult<TfsFileStatus> fileStatus(final TfsConnectionConfig config,
+                                                         final String collectionName,
+                                                         final String workspaceName,
+                                                         final String localPath) {
+        return execute("fileStatus", new CoreCallable<TfsFileStatus>() {
+            @Override
+            public TfsFileStatus call(List<String> logs) throws Exception {
+                Workspace workspace = loadWorkspace(config, collectionName, workspaceName);
+                String absolute = new File(require(localPath, "localPath")).getAbsolutePath();
+                boolean exists = new File(absolute).exists();
+                String serverPath = mappedServerPathOf(workspace, absolute);
+                if (serverPath == null) {
+                    logs.add("File not mapped: " + absolute);
+                    return TfsFileStatus.notMapped(absolute, exists);
+                }
+                ExtendedItem item = queryExtendedItem(workspace, serverPath);
+                PendingChange pendingChange = findPendingChange(workspace, serverPath);
+                String pendingChangeType = pendingChange == null ? null : toPendingStatus(pendingChange);
+                boolean pendingEdit = pendingChange != null && pendingChange.isEdit();
+                int localVersion = item == null ? 0 : item.getLocalVersion();
+                int latestVersion = item == null ? 0 : item.getLatestVersion();
+                boolean serverExists = latestVersion > 0;
+                String status;
+                if (item == null) {
+                    status = exists ? "localOnly" : "notDownloaded";
+                } else {
+                    status = resolveDiffStatus(item, pendingChange, new File(absolute));
+                }
+                boolean upToDate = serverExists && localVersion > 0 && localVersion >= latestVersion;
+                logs.add("File status: " + serverPath + " local=" + localVersion + " latest=" + latestVersion + " status=" + status);
+                return new TfsFileStatus(absolute, serverPath, true, exists, serverExists, pendingEdit,
+                    pendingChangeType, localVersion, latestVersion, upToDate, status);
+            }
+        });
+    }
+
+    /**
+     * 将本地绝对路径解析为映射的服务端路径，取最深（最长）匹配的映射根；未命中任何映射返回 null。
+     */
+    private String mappedServerPathOf(Workspace workspace, String absoluteLocalPath) {
+        WorkingFolder[] folders = workspace.getFolders();
+        if (folders == null) {
+            return null;
+        }
+        String best = null;
+        String bestRoot = null;
+        for (WorkingFolder folder : folders) {
+            if (folder.getLocalItem() == null) {
+                continue;
+            }
+            String localRoot = new File(folder.getLocalItem()).getAbsolutePath();
+            boolean underRoot = absoluteLocalPath.equals(localRoot)
+                || absoluteLocalPath.startsWith(localRoot + File.separator);
+            if (!underRoot) {
+                continue;
+            }
+            if (bestRoot != null && localRoot.length() <= bestRoot.length()) {
+                continue;
+            }
+            bestRoot = localRoot;
+            String serverRoot = normalizeServerPath(folder.getServerItem());
+            String relative = absoluteLocalPath.substring(localRoot.length()).replace(File.separatorChar, '/');
+            while (relative.startsWith("/")) {
+                relative = relative.substring(1);
+            }
+            best = relative.isEmpty() ? serverRoot : serverRoot + "/" + relative;
+        }
+        return best;
+    }
+
+    /**
+     * 查询单个服务端路径对应的 ExtendedItem（本地版本 / 最新版本 / 类型），无则返回 null。
+     */
+    private ExtendedItem queryExtendedItem(Workspace workspace, String serverPath) {
+        ExtendedItem[][] groups = workspace.getExtendedItems(
+            new ItemSpec[]{new ItemSpec(normalizeServerPath(serverPath), RecursionType.NONE)},
+            DeletedState.NON_DELETED,
+            ItemType.ANY,
+            GetItemsOptions.NONE
+        );
+        if (groups == null) {
+            return null;
+        }
+        for (ExtendedItem[] group : groups) {
+            if (group == null) {
+                continue;
+            }
+            for (ExtendedItem item : group) {
+                if (item != null) {
+                    return item;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 查询单个服务端路径上的挂起更改，无则返回 null。
+     */
+    private PendingChange findPendingChange(Workspace workspace, String serverPath) {
+        PendingChange[] changes = queryPendingChanges(workspace, Arrays.asList(serverPath), false);
+        String normalized = normalizeServerPath(serverPath).toLowerCase();
+        for (PendingChange change : changes) {
+            if (change.getServerItem() != null && change.getServerItem().toLowerCase().equals(normalized)) {
+                return change;
+            }
+        }
+        return null;
+    }
+
+    /**
      * 生成本地文件和服务器 latest 的文本 diff。
      */
     public CoreOperationResult<TfsTextDiff> diffLocalLatest(final TfsConnectionConfig config,
@@ -2186,6 +2300,84 @@ public class MacTfsCoreService {
 
         public String getEncoding() {
             return encoding;
+        }
+    }
+
+    public static class TfsFileStatus {
+        private final String localPath;
+        private final String serverPath;
+        private final boolean mapped;
+        private final boolean exists;
+        private final boolean serverExists;
+        private final boolean pendingEdit;
+        private final String pendingChangeType;
+        private final int localVersion;
+        private final int latestVersion;
+        private final boolean upToDate;
+        private final String status;
+
+        public TfsFileStatus(String localPath, String serverPath, boolean mapped, boolean exists, boolean serverExists,
+                             boolean pendingEdit, String pendingChangeType, int localVersion, int latestVersion,
+                             boolean upToDate, String status) {
+            this.localPath = localPath;
+            this.serverPath = serverPath;
+            this.mapped = mapped;
+            this.exists = exists;
+            this.serverExists = serverExists;
+            this.pendingEdit = pendingEdit;
+            this.pendingChangeType = pendingChangeType;
+            this.localVersion = localVersion;
+            this.latestVersion = latestVersion;
+            this.upToDate = upToDate;
+            this.status = status;
+        }
+
+        public static TfsFileStatus notMapped(String localPath, boolean exists) {
+            return new TfsFileStatus(localPath, null, false, exists, false, false, null, 0, 0, false, "notMapped");
+        }
+
+        public String getLocalPath() {
+            return localPath;
+        }
+
+        public String getServerPath() {
+            return serverPath;
+        }
+
+        public boolean isMapped() {
+            return mapped;
+        }
+
+        public boolean isExists() {
+            return exists;
+        }
+
+        public boolean isServerExists() {
+            return serverExists;
+        }
+
+        public boolean isPendingEdit() {
+            return pendingEdit;
+        }
+
+        public String getPendingChangeType() {
+            return pendingChangeType;
+        }
+
+        public int getLocalVersion() {
+            return localVersion;
+        }
+
+        public int getLatestVersion() {
+            return latestVersion;
+        }
+
+        public boolean isUpToDate() {
+            return upToDate;
+        }
+
+        public String getStatus() {
+            return status;
         }
     }
 
