@@ -88,10 +88,12 @@ cd mactfs
 ```bash
 cd mactfs-mcp
 pnpm install
-pnpm build      # tsc 编译，产物在 dist/
+pnpm build          # 开发态：tsc 编译，产物在 dist/
+pnpm build:bundle   # 打包态：esbuild 单文件，产物在 dist-bundle/index.cjs
 ```
 
 - 开发态 Electron 从 `mactfs-mcp/dist/index.js` 拉起 MCP，所以**改完 MCP 代码必须重新 `pnpm build`**。
+- 打包态用 esbuild 单文件 `dist-bundle/index.cjs`（免带 node_modules）；`pnpm dist` 已通过 `prepare:mcp` 自动生成它，无需手动跑。
 
 ### 步骤 5 · 打包
 
@@ -109,19 +111,19 @@ pnpm dist
 | `MacTFS-<版本>-arm64.dmg` | Apple Silicon（M 系列） |
 | `MacTFS-<版本>-x64.dmg` | Intel |
 
-打包配置见 `mactfsui/package.json` 的 `build` 字段：`appId=com.mydev.mactfs`，`extraResources` 把后端 lib 与 x64 JRE 带进 `Resources/`，`identity: null`（不签名）。
+打包配置见 `mactfsui/package.json` 的 `build` 字段：`appId=com.mydev.mactfs`，`extraResources` 把后端 lib、x64 JRE 与 **MCP 单文件包** 带进 `Resources/`，`identity: null`（不签名）。
 
-### ⚠️ 已知限制：MCP 暂未打进 .app
+### MCP 已随 .app 一起打包
 
-当前 `package.json` 的 `extraResources` **只包含** `server/lib` 与 `jre-x64`，**没有** MCP。打包后的应用里：
+`extraResources` 现包含三项，分别落到 `.app/Contents/Resources/` 下：
 
-- `resolveMcpEntry()` 先找 `Resources/mcp/index.js`（不存在）→ 再退回开发态路径（打包后也不存在）→ 启动时打印「未找到 MCP 入口，跳过启动」。
-- **结论：目前只有「开发模式」下 MCP 可用；正式 .app 暂时不带 MCP。**
+| from | to | 内容 |
+|---|---|---|
+| `../mactfs/build/install/mactfs/lib` | `server/lib` | Java 后端 jar + JNI native |
+| `runtime/jdk-x64` | `jre-x64` | x64 JRE |
+| `../mactfs-mcp/dist-bundle` | `mcp` | MCP esbuild 单文件 `index.cjs` |
 
-要让 MCP 进 .app，需要补两步（待办）：
-
-1. 在 `extraResources` 增加一条，把 `mactfs-mcp/dist` + 生产依赖（`express`、`@modelcontextprotocol/sdk`、`zod`）放到 `Resources/mcp/`。
-2. 确认 `resolveMcpEntry()` 命中 `Resources/mcp/index.js`。
+启动时 `resolveMcpEntry()` 打包态命中 `Resources/mcp/index.cjs`，由 Electron 自带 Node 拉起。所以**正式 .app 也自带 MCP**，AI 自动签出在安装版里同样可用（前提是客户端在运行）。
 
 ---
 
@@ -247,7 +249,7 @@ curl -s http://127.0.0.1:38766/healthz
 | MCP 端口 38766 连不上 | MacTFS 客户端没开，或开发态没先 `pnpm build` 过 MCP |
 | 改了 MCP 代码不生效 | 忘了在 `mactfs-mcp` 重新 `pnpm build`（Electron 加载的是 `dist/`） |
 | 改了 Java 代码不生效 | 忘了 `gradlew installDist` 或没重启后端 |
-| 打包后的 .app 里没有 MCP | 已知限制：MCP 暂未加入 `extraResources`（见三 · 已知限制） |
+| 打包后的 .app 里 MCP 不工作 | 确认打包前生成了 `mactfs-mcp/dist-bundle/index.cjs`（`pnpm dist` 会自动跑 `prepare:mcp`） |
 | 工具返回 `skipped / notMapped` | 文件不在任何 TFS 映射目录下，本就无需签出，可直接继续 |
 | 工具返回 `notConnected` | 后端 38765 没起来，确认 MacTFS 客户端在运行 |
 | 接口全部 401 | token 不一致，确认用的是 `~/.mactfs/server-token` 的最新值 |

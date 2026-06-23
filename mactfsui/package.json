@@ -13,7 +13,8 @@
     "electron:dev": "concurrently -k \"pnpm dev\" \"NO_PROXY=localhost,127.0.0.1 wait-on http://localhost:5173 && NODE_ENV=development electron electron/main.cjs\"",
     "start": "pnpm build && pnpm electron",
     "prepare:runtime": "node scripts/prepare-runtime.mjs",
-    "dist": "pnpm build && pnpm prepare:runtime && electron-builder --mac --arm64 --x64",
+    "prepare:mcp": "pnpm --dir ../mactfs-mcp install && pnpm --dir ../mactfs-mcp run build:bundle",
+    "dist": "pnpm build && pnpm prepare:runtime && pnpm prepare:mcp && electron-builder --mac --arm64 --x64",
     "typecheck": "react-router typegen && tsc",
     "format": "prettier --write \"**/*.{ts,tsx}\""
   },
@@ -38,6 +39,10 @@
       {
         "from": "runtime/jdk-x64",
         "to": "jre-x64"
+      },
+      {
+        "from": "../mactfs-mcp/dist-bundle",
+        "to": "mcp"
       }
     ],
     "mac": {

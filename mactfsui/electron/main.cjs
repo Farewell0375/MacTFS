@@ -400,11 +400,13 @@ async function startService() {
  */
 function resolveMcpEntry() {
   if (app.isPackaged) {
-    const packaged = path.join(process.resourcesPath, "mcp", "index.js")
+    // 打包态：esbuild 单文件包随 extraResources 落在 Resources/mcp/index.cjs。
+    const packaged = path.join(process.resourcesPath, "mcp", "index.cjs")
     if (fs.existsSync(packaged)) {
       return packaged
     }
   }
+  // 开发态：tsc 产物（ESM + node_modules）。
   const dev = path.join(resolveProjectRoot(), "mactfs-mcp", "dist", "index.js")
   if (fs.existsSync(dev)) {
     return dev

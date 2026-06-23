@@ -88,6 +88,18 @@ pnpm typecheck
 
 Electron 开发态会自动从 `mactfs-mcp/dist/index.js` 拉起本服务，所以改完记得 `pnpm build`。
 
-## 打包（TODO）
+## 打包进 .app
 
-打包进 .app 时需把 `dist/` 与生产依赖（express 等）放到 `Resources/mcp/`，并让 `resolveMcpEntry()` 命中。当前已预留打包态路径 `Resources/mcp/index.js`，但 `electron-builder` 的 extraResources 与依赖裁剪待补。
+打包态用 **esbuild 把整个 MCP 打成单文件**（免带 node_modules），再随 electron-builder 落到 `Resources/mcp/index.cjs`：
+
+```bash
+pnpm build:bundle   # 产物 dist-bundle/index.cjs（单文件 CJS）
+```
+
+`mactfsui` 侧已接好：
+
+- `package.json` 的 `extraResources` 增加 `{ from: "../mactfs-mcp/dist-bundle", to: "mcp" }`，把单文件包复制进 `Resources/mcp/`。
+- `pnpm dist` 链路里加了 `prepare:mcp`（自动 `pnpm install` + `build:bundle`），打包前会自动生成最新单文件包。
+- Electron 主进程 `resolveMcpEntry()` 打包态命中 `Resources/mcp/index.cjs`，用 Electron 自带 Node（`ELECTRON_RUN_AS_NODE`）拉起。
+
+> 打包态用 `.cjs`（CJS），开发态仍用 `dist/index.js`（tsc 的 ESM 产物 + node_modules），两条路径互不影响。
