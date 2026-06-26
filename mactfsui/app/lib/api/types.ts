@@ -222,6 +222,9 @@ export interface ConflictResolutionResult {
   remainingConflicts: number
 }
 
+// 操作来源：mcp 为 AI 通过 MCP 调用，ui 为桌面端手动操作。旧记录可能缺省。
+export type OperationSource = "mcp" | "ui"
+
 // 操作日志项，对应服务端 OperationLogEntry。
 export interface OperationLogEntry {
   operation: string
@@ -231,4 +234,6 @@ export interface OperationLogEntry {
   durationMs: number
   success: boolean
   errorMessage: string | null
+  /** 操作来源：mcp（AI）/ ui（手动）；旧记录可能为 undefined，按手动处理。 */
+  source?: OperationSource
 }

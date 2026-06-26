@@ -45,6 +45,8 @@ async function request<T = Record<string, unknown>>(
   const token = await getToken()
   const headers: Record<string, string> = {
     Accept: "application/json",
+    // 标记本次请求来自桌面端手动操作，供后端操作日志区分「AI 操作 / 手动操作」。
+    "X-MacTFS-Source": "ui",
   }
   if (token) {
     headers.Authorization = `Bearer ${token}`

@@ -26,7 +26,11 @@ async function request<T>(
     }
   }
 
-  const headers: Record<string, string> = { Accept: "application/json" }
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    // 标记本次请求来自 MCP（AI），供后端操作日志区分「AI 操作 / 手动操作」。
+    "X-MacTFS-Source": "mcp",
+  }
   if (token) {
     headers.Authorization = `Bearer ${token}`
   }

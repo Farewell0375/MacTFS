@@ -19,6 +19,7 @@ export type {
   MappingConfig,
   MappingInfo,
   OperationLogEntry,
+  OperationSource,
   PendingChange,
   ServerItem,
   TextDiff,

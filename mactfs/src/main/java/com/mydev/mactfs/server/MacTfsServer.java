@@ -96,6 +96,64 @@ public class MacTfsServer {
         Spark.awaitInitialization();
         System.out.println("MacTFS API server listening on http://" + HOST + ":" + PORT);
         System.out.println("MacTFS token file: " + tokenStore.getTokenFile().getAbsolutePath());
+        startParentWatchdog();
+    }
+
+    /**
+     * 启动父进程看护：当拉起本服务的宿主（Electron）进程消失时自动退出，
+     * 避免宿主被强制结束 / 崩溃后遗留「占着 38765 端口」的孤儿后端。
+     * 依据环境变量 MACTFS_PARENT_PID（由宿主 spawn 时写入）；未设置则不启用（如 CLI / 手动启动）。
+     */
+    private void startParentWatchdog() {
+        String raw = System.getenv("MACTFS_PARENT_PID");
+        if (raw == null || raw.trim().isEmpty()) {
+            return;
+        }
+        final long parentPid;
+        try {
+            parentPid = Long.parseLong(raw.trim());
+        } catch (NumberFormatException exception) {
+            return;
+        }
+        Thread watchdog = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        Thread.sleep(3000L);
+                    } catch (InterruptedException exception) {
+                        return;
+                    }
+                    if (!isProcessAlive(parentPid)) {
+                        System.out.println("MacTFS parent process " + parentPid + " gone, exiting.");
+                        System.exit(0);
+                    }
+                }
+            }
+        }, "mactfs-parent-watchdog");
+        watchdog.setDaemon(true);
+        watchdog.start();
+        System.out.println("MacTFS watching parent pid " + parentPid);
+    }
+
+    /**
+     * 判断给定 pid 的进程是否存活：macOS / Linux 上用 `/bin/kill -0 <pid>` 探测，退出码 0 即存活。
+     * 探测自身出现异常时按「存活」处理，宁可不退也不误杀正在服务的后端。
+     */
+    private boolean isProcessAlive(long pid) {
+        try {
+            Process probe = new ProcessBuilder("/bin/kill", "-0", String.valueOf(pid))
+                .redirectErrorStream(true)
+                .start();
+            boolean finished = probe.waitFor(5, TimeUnit.SECONDS);
+            if (!finished) {
+                probe.destroyForcibly();
+                return true;
+            }
+            return probe.exitValue() == 0;
+        } catch (Exception exception) {
+            return true;
+        }
     }
 
     /**
@@ -151,7 +209,7 @@ public class MacTfsServer {
     private void registerFilters() {
         Spark.before((request, response) -> {
             response.header("Access-Control-Allow-Origin", "*");
-            response.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
+            response.header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-MacTFS-Source");
             response.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
             if ("OPTIONS".equalsIgnoreCase(request.requestMethod())) {
                 throw Spark.halt(204, "");
@@ -741,6 +799,7 @@ public class MacTfsServer {
      */
     private String handle(Request request, Response response, String operation, long timeoutMs, ApiCallable callable) throws Exception {
         long startedAt = System.currentTimeMillis();
+        String source = resolveSource(request);
         ApiResult result;
         Future<ApiResult> future = executorService.submit(new Callable<ApiResult>() {
             @Override
@@ -764,8 +823,20 @@ public class MacTfsServer {
         result.startedAt = startedAt;
         result.endedAt = endedAt;
         response.status(result.status);
-        logStore.add(operation, summarize(request), startedAt, endedAt, result);
+        logStore.add(operation, summarize(request), startedAt, endedAt, result, source);
         return objectMapper.writeValueAsString(result);
+    }
+
+    /**
+     * 判定本次请求来源：mcp（AI 通过 MCP 调用）或 ui（桌面端手动操作）。
+     * 依据自定义请求头 X-MacTFS-Source；缺省或未知一律按 ui 处理，兼容未带该头的旧客户端。
+     */
+    private String resolveSource(Request request) {
+        String raw = request.headers("X-MacTFS-Source");
+        if (raw != null && "mcp".equalsIgnoreCase(raw.trim())) {
+            return "mcp";
+        }
+        return "ui";
     }
 
     /**
@@ -1292,7 +1363,7 @@ public class MacTfsServer {
         /**
          * 追加一次 API 操作日志，记录开始、结束、耗时和失败原因。
          */
-        synchronized void add(String operation, String summary, long startedAt, long endedAt, ApiResult result) {
+        synchronized void add(String operation, String summary, long startedAt, long endedAt, ApiResult result, String source) {
             OperationLogEntry entry = new OperationLogEntry();
             entry.operation = operation;
             entry.summary = summary;
@@ -1301,6 +1372,7 @@ public class MacTfsServer {
             entry.durationMs = endedAt - startedAt;
             entry.success = result.success;
             entry.errorMessage = result.errorMessage;
+            entry.source = source;
             logs.add(entry);
             while (logs.size() > MAX_LOGS) {
                 logs.remove(0);
@@ -1323,5 +1395,7 @@ public class MacTfsServer {
         public long durationMs;
         public boolean success;
         public String errorMessage;
+        /** 操作来源：mcp（AI）或 ui（手动）。 */
+        public String source;
     }
 }

@@ -377,6 +377,8 @@ async function startService() {
     args.push(SERVER_MAIN_CLASS)
     serverProcess = spawn(resolveJavaBin(), args, {
       cwd: app.isPackaged ? process.resourcesPath : path.join(resolveProjectRoot(), "mactfs"),
+      // 传入父进程 pid，让 Java 后端自我看护：宿主崩溃 / 被强杀时它也会自己退出，避免遗留占用 38765 的孤儿。
+      env: { ...process.env, MACTFS_PARENT_PID: String(process.pid) },
       stdio: "ignore",
     })
     serverProcess.on("exit", () => {
