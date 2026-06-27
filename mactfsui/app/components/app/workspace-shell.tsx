@@ -139,7 +139,7 @@ export function WorkspaceShell({
               loading={pending.loading}
               error={pending.error}
               checkinBusy={actions.checkinBusy}
-              onToggleExcluded={pending.toggleExcluded}
+              onSetExcluded={pending.setExcluded}
               onCheckin={actions.handleCheckin}
               onFileAction={actions.handleFileAction}
               onRefresh={() => void pending.refresh()}

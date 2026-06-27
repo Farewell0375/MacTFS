@@ -40,15 +40,22 @@ export function usePendingChanges() {
   }, [refresh])
 
   /**
-   * 切换某条挂起更改的 Included / Excluded 归属。
+   * 批量设置一组挂起更改的 Included / Excluded 归属。
+   * 单项勾选传单元素数组，目录节点级联传子树全部 serverPath。
+   * excluded=true 全部排除，false 全部移回 Included。
    */
-  const toggleExcluded = useCallback((serverPath: string) => {
+  const setExcluded = useCallback((serverPaths: string[], excluded: boolean) => {
+    if (serverPaths.length === 0) {
+      return
+    }
     setExcludedKeys((prev) => {
       const next = new Set(prev)
-      if (next.has(serverPath)) {
-        next.delete(serverPath)
-      } else {
-        next.add(serverPath)
+      for (const serverPath of serverPaths) {
+        if (excluded) {
+          next.add(serverPath)
+        } else {
+          next.delete(serverPath)
+        }
       }
       return next
     })
@@ -70,6 +77,6 @@ export function usePendingChanges() {
     excludedKeys,
     pendingByServerPath,
     refresh,
-    toggleExcluded,
+    setExcluded,
   }
 }
